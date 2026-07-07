@@ -105,6 +105,7 @@
 
     const css = viewerCss();
     const js = viewerScript().replace(/<\/script/gi, "<\\/script");
+    const embeddedJson = JSON.stringify(project).replace(/<\/script/gi, "<\\/script");
     const dataComment = buildDataComment(project);
 
     return [
