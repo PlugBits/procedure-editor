@@ -82,6 +82,7 @@
 
     const css = viewerCss();
     const js = viewerScript().replace(/<\/script/gi, "<\\/script");
+    const embeddedJson = JSON.stringify(project).replace(/<\/script/gi, "<\\/script");
 
     return [
       "<!DOCTYPE html>",
@@ -93,6 +94,7 @@
       "<style>" + css + "</style>",
       "</head>",
       "<body>",
+      '<script type="application/json" id="procedure-data">' + embeddedJson + "</script>",
       '<header class="viewer-header">',
       '<div><h1>' + utils.escapeHtml(cover.title || "PC操作手順書") + '</h1><p>閲覧用手順書</p></div>',
       '<input id="searchBox" type="search" placeholder="検索">',

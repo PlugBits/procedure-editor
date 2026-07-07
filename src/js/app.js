@@ -163,6 +163,15 @@
       return;
     }
 
+    if (event.target.id === "htmlFileInput") {
+      const file = event.target.files[0];
+      const modeSelect = utils.$("htmlImportMode");
+      const mode = modeSelect ? modeSelect.value : "main";
+      ns.exporter.importViewerHtmlFile(file, mode);
+      event.target.value = "";
+      return;
+    }
+
     if (event.target.dataset.action === "block-image-input") {
       ns.blocks.setBlockImageFromFile(event.target.dataset.blockId, event.target.files[0]);
       event.target.value = "";

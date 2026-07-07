@@ -176,6 +176,17 @@ textarea {
   cursor: pointer;
 }
 
+.html-import-mode {
+  height: 32px;
+  padding: 0 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 13px;
+  cursor: pointer;
+}
+
 .app-main {
   max-width: 1600px;
   margin: 18px auto 34px;

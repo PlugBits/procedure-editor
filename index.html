@@ -20,6 +20,14 @@
           JSON読込
           <input id="jsonFileInput" type="file" accept="application/json,.json" />
         </label>
+        <select id="htmlImportMode" class="html-import-mode" title="HTML読込モード">
+          <option value="main">メインとして読み込む</option>
+          <option value="merge">手順のみ追加</option>
+        </select>
+        <label class="button secondary file-button">
+          HTML読込
+          <input id="htmlFileInput" type="file" accept="text/html,.html" />
+        </label>
         <button type="button" class="secondary" data-action="export-json">JSON保存</button>
         <button type="button" class="secondary" data-action="download-markdown">Markdown保存</button>
         <button type="button" class="secondary" data-action="export-viewer">閲覧HTML出力</button>

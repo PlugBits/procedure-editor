@@ -97,6 +97,44 @@
     }
   }
 
+  async function importViewerHtmlFile(file, mode) {
+    if (!file) return;
+    try {
+      const text = await utils.readFileAsText(file);
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(text, "text/html");
+      const scriptEl = doc.getElementById("procedure-data");
+      if (!scriptEl) {
+        alert("このHTMLファイルには手順書データが含まれていません。\nこのアプリで出力した閲覧用HTMLのみ読み込めます。");
+        return;
+      }
+      const data = JSON.parse(scriptEl.textContent);
+
+      if (mode === "main") {
+        if (state.store.dirty && !confirm("未保存の変更があります。HTMLをメインとして読み込みますか？")) return;
+        state.setProject(data);
+        ns.render.renderAll();
+        utils.toast("HTMLをメインとして読み込みました。");
+      } else {
+        const incoming = state.normalizeProject(data);
+        incoming.steps.forEach(function (step) {
+          step.id = utils.uid("step");
+          (step.blocks || []).forEach(function (block) {
+            block.id = utils.uid("block");
+            (block.annotations || []).forEach(function (ann) { ann.id = utils.uid("ann"); });
+            (block.jumps || []).forEach(function (jump) { jump.id = utils.uid("jump"); });
+          });
+          state.store.project.steps.push(step);
+        });
+        state.markDirty();
+        ns.render.renderAll();
+        utils.toast("手順を " + incoming.steps.length + " 件追加しました。");
+      }
+    } catch (error) {
+      alert("HTMLを読み込めませんでした: " + error.message);
+    }
+  }
+
   function downloadMarkdown() {
     const project = state.store.project;
     const baseName = utils.sanitizeFileName(project.cover.title, "手順書");
@@ -133,6 +171,7 @@
     generateMarkdown,
     exportJson,
     importJsonFile,
+    importViewerHtmlFile,
     downloadMarkdown,
     copyMarkdown,
     printDocument
