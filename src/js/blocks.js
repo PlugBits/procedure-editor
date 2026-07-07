@@ -5,8 +5,14 @@
   const state = ns.state;
 
   function addStep() {
-    const step = state.createStep(state.store.project.steps.length + 1);
-    state.store.project.steps.push(step);
+    const normalCount = state.store.project.steps.filter(function (s) { return s.type === "normal"; }).length;
+    const step = state.createStep(normalCount + 1);
+    const firstNonNormal = state.store.project.steps.findIndex(function (s) { return s.type !== "normal"; });
+    if (firstNonNormal === -1) {
+      state.store.project.steps.push(step);
+    } else {
+      state.store.project.steps.splice(firstNonNormal, 0, step);
+    }
     state.store.currentStepId = step.id;
     state.store.currentBlockId = step.blocks[0] ? step.blocks[0].id : null;
     state.store.selectedAnnotationId = null;
@@ -16,10 +22,10 @@
     utils.toast("STEPを追加しました。");
   }
 
-  function deleteCurrentStep() {
-    const found = state.findStepById(state.store.currentStepId);
+  function deleteStep(stepId) {
+    const found = state.findStepById(stepId || state.store.currentStepId);
     if (!found) return;
-    if (!confirm("現在のSTEPを削除しますか？")) return;
+    if (!confirm("このSTEPを削除しますか？")) return;
     state.store.project.steps.splice(found.stepIndex, 1);
     const next = state.store.project.steps[Math.max(0, found.stepIndex - 1)] || state.store.project.steps[0] || null;
     state.store.currentStepId = next ? next.id : null;
@@ -28,6 +34,10 @@
     state.markDirty();
     ns.render.renderAll();
     utils.toast("STEPを削除しました。");
+  }
+
+  function deleteCurrentStep() {
+    deleteStep(state.store.currentStepId);
   }
 
   function moveCurrentStep(offset) {
@@ -228,6 +238,21 @@
     utils.toast("ブロックの帰属STEPを変更しました。");
   }
 
+  function reorderStep(draggedId, targetId, insertAfter) {
+    if (draggedId === targetId) return;
+    const steps = state.store.project.steps;
+    const from = steps.findIndex(function (s) { return s.id === draggedId; });
+    const targetIdx = steps.findIndex(function (s) { return s.id === targetId; });
+    if (from < 0 || targetIdx < 0) return;
+    const step = steps.splice(from, 1)[0];
+    let to = steps.findIndex(function (s) { return s.id === targetId; });
+    if (insertAfter) to += 1;
+    steps.splice(to, 0, step);
+    state.store.currentStepId = draggedId;
+    state.markDirty();
+    ns.render.renderAll();
+  }
+
   function reorderBlock(draggedId, targetId, insertAfter) {
     const step = state.getCurrentStep();
     if (!step || draggedId === targetId) return;
@@ -268,27 +293,38 @@
     await setBlockImageFromFile(block.id, file);
   }
 
-  function toggleStepType() {
+  function setStepType(newType) {
+    if (!state.STEP_TYPES.includes(newType)) return;
     const found = state.findStepById(state.store.currentStepId);
     if (!found) return;
     const step = found.step;
-    const wasError = step.type === "error";
-    step.type = wasError ? "normal" : "error";
+    if (step.type === newType) return;
 
-    if (!wasError) {
-      state.store.project.steps.splice(found.stepIndex, 1);
-      state.store.project.steps.push(step);
+    step.type = newType;
+    const steps = state.store.project.steps;
+    steps.splice(found.stepIndex, 1);
+
+    if (newType === "normal") {
+      const firstNonNormal = steps.findIndex(function (s) { return s.type !== "normal"; });
+      if (firstNonNormal === -1) steps.push(step);
+      else steps.splice(firstNonNormal, 0, step);
+    } else if (newType === "irregular") {
+      const firstError = steps.findIndex(function (s) { return s.type === "error"; });
+      if (firstError === -1) steps.push(step);
+      else steps.splice(firstError, 0, step);
+    } else {
+      steps.push(step);
     }
 
     state.markDirty();
     ns.render.renderAll();
-    utils.toast(wasError ? "通常STEPに変更しました。" : "エラー対応STEPに変更しました。末尾に移動しました。");
+    utils.toast("STEPタイプを変更しました。");
   }
 
   function addJumpToBlock(blockId, targetStepId) {
     const found = state.findBlockById(blockId);
     const target = state.findStepById(targetStepId);
-    if (!found || !target || target.step.type !== "error") return;
+    if (!found || !target || target.step.type === "normal") return;
 
     const exists = (found.block.jumps || []).some(function (j) {
       return j.targetStepId === targetStepId;
@@ -341,6 +377,7 @@
 
   ns.blocks = {
     addStep,
+    deleteStep,
     deleteCurrentStep,
     moveCurrentStep,
     updateCurrentStepField,
@@ -352,10 +389,11 @@
     setBlockImageFromFile,
     clearBlockImage,
     moveBlockToStep,
+    reorderStep,
     reorderBlock,
     ensureEditableBlock,
     pasteImage,
-    toggleStepType,
+    setStepType,
     addJumpToBlock,
     removeJumpFromBlock
   };

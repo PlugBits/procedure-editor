@@ -17,20 +17,11 @@
         <span id="dirtyState" class="save-state" aria-live="polite">保存済み</span>
         <button type="button" class="secondary" data-action="new-project">新規</button>
         <label class="button secondary file-button">
-          JSON読込
-          <input id="jsonFileInput" type="file" accept="application/json,.json" />
-        </label>
-        <select id="htmlImportMode" class="html-import-mode" title="HTML読込モード">
-          <option value="main">メインとして読み込む</option>
-          <option value="merge">手順のみ追加</option>
-        </select>
-        <label class="button secondary file-button">
           HTML読込
           <input id="htmlFileInput" type="file" accept="text/html,.html" />
         </label>
-        <button type="button" class="secondary" data-action="export-json">JSON保存</button>
         <button type="button" class="secondary" data-action="download-markdown">Markdown保存</button>
-        <button type="button" class="secondary" data-action="export-viewer">閲覧HTML出力</button>
+        <button type="button" class="secondary" data-action="export-viewer">HTML保存</button>
         <button type="button" data-action="print">PDF/印刷</button>
       </div>
     </div>
@@ -128,6 +119,14 @@
                 <span>画面名</span>
                 <input id="screenName" type="text" data-step-field="screen" autocomplete="off" />
               </label>
+              <label class="field no-print step-type-field">
+                <span>STEPタイプ</span>
+                <select id="stepType">
+                  <option value="normal">通常</option>
+                  <option value="irregular">非定常業務</option>
+                  <option value="error">エラー対応</option>
+                </select>
+              </label>
             </div>
             <label class="field wide">
               <span>STEP概要</span>
@@ -141,10 +140,6 @@
               <h3>説明ブロック</h3>
               <div class="toolbar-actions">
                 <button type="button" data-action="add-block">ブロック追加</button>
-                <button type="button" class="secondary" data-action="move-step" data-dir="-1">STEP上へ</button>
-                <button type="button" class="secondary" data-action="move-step" data-dir="1">STEP下へ</button>
-                <button type="button" id="toggleStepType" class="secondary" data-action="toggle-step-type">エラー対応に変更</button>
-                <button type="button" class="danger" data-action="delete-step">STEP削除</button>
               </div>
             </div>
             <div id="blockList" class="block-list"></div>
@@ -175,6 +170,27 @@
   </main>
 
   <div id="toast" class="toast" aria-live="polite"></div>
+
+  <div id="stepImportModal" class="step-import-modal" hidden>
+    <div class="step-import-backdrop" data-action="cancel-step-import"></div>
+    <div class="step-import-panel">
+      <div class="step-import-head">
+        <h2>STEPをインポート</h2>
+        <p>追加するSTEPを選択してください。</p>
+      </div>
+      <div class="step-import-body">
+        <label class="step-import-all-row">
+          <input type="checkbox" id="stepImportSelectAll" checked> 全選択
+        </label>
+        <ul id="stepImportList" class="step-import-list"></ul>
+      </div>
+      <div class="step-import-foot">
+        <button type="button" class="replace-btn" data-action="replace-all-import">全て置き換える</button>
+        <button type="button" class="secondary" data-action="cancel-step-import">キャンセル</button>
+        <button type="button" data-action="confirm-step-import">選択STEPを追加</button>
+      </div>
+    </div>
+  </div>
 
   <script src="src/js/utils.js" defer></script>
   <script src="src/js/state.js" defer></script>

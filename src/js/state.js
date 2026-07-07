@@ -21,7 +21,7 @@
   const STEP_FIELDS = ["title", "screen", "summary", "check"];
   const BLOCK_FIELDS = ["title", "text", "image", "imageName"];
   const ANNOTATION_TYPES = ["circle", "arrow", "number", "marker"];
-  const STEP_TYPES = ["normal", "error"];
+  const STEP_TYPES = ["normal", "error", "irregular"];
 
   const store = {
     project: createProject(),
@@ -166,7 +166,8 @@
   }
 
   function normalizeJump(jump) {
-    if (!jump || typeof jump !== "object" || !jump.targetStepId) return null;
+    if (!jump || typeof jump !== "object") return null;
+    if (!jump.targetStepId) return null;
     return {
       id: jump.id || utils.uid("jump"),
       targetStepId: String(jump.targetStepId),

@@ -4,6 +4,7 @@
   const utils = ns.utils;
   const state = ns.state;
   let draggedBlockId = null;
+  let draggedStepId = null;
 
   document.addEventListener("DOMContentLoaded", init);
 
@@ -42,9 +43,6 @@
         case "new-project":
           newProject();
           return;
-        case "export-json":
-          ns.exporter.exportJson();
-          return;
         case "download-markdown":
           ns.exporter.downloadMarkdown();
           return;
@@ -54,6 +52,15 @@
         case "export-viewer":
           ns.viewerExport.exportViewerHtml();
           return;
+        case "confirm-step-import":
+          ns.exporter.confirmStepImport();
+          return;
+        case "replace-all-import":
+          ns.exporter.replaceAllImport();
+          return;
+        case "cancel-step-import":
+          ns.exporter.cancelStepImport();
+          return;
         case "print":
           ns.exporter.printDocument();
           return;
@@ -61,7 +68,7 @@
           ns.blocks.addStep();
           return;
         case "delete-step":
-          ns.blocks.deleteCurrentStep();
+          ns.blocks.deleteStep(actionNode.dataset.stepId || state.store.currentStepId);
           return;
         case "move-step":
           ns.blocks.moveCurrentStep(Number(actionNode.dataset.dir));
@@ -100,17 +107,17 @@
           state.store.currentBlockId = actionNode.dataset.blockId;
           ns.annotations.deleteSelectedAnnotation();
           return;
-        case "toggle-step-type":
-          ns.blocks.toggleStepType();
+        case "set-annotation-mode":
+          ns.annotations.setAnnotationMode(actionNode.dataset.mode);
           return;
         case "add-block-jump": {
-          const card = actionNode.closest("[data-block-id]");
+          const card = actionNode.closest("article");
           const select = card && card.querySelector("[data-jump-step-select]");
           const targetStepId = select && select.value;
           if (targetStepId) {
             ns.blocks.addJumpToBlock(actionNode.dataset.blockId, targetStepId);
           } else {
-            utils.toast("ジャンプ先のエラー対応STEPを選択してください。");
+            utils.toast("ジャンプ先のSTEPを選択してください。");
           }
           return;
         }
@@ -135,6 +142,11 @@
   }
 
   function handleInput(event) {
+    if (event.target.dataset.annotationResize !== undefined) {
+      ns.annotations.resizeSelectedAnnotation(event.target.dataset.blockId, Number(event.target.value));
+      return;
+    }
+
     const coverField = event.target.dataset.coverField;
     if (coverField) {
       state.store.project.cover[coverField] = event.target.value;
@@ -158,8 +170,9 @@
   }
 
   function handleChange(event) {
-    if (event.target.id === "jsonFileInput") {
-      importJson(event.target.files[0], event.target);
+    if (event.target.id === "htmlFileInput") {
+      ns.exporter.openStepImportModal(event.target.files[0]);
+      event.target.value = "";
       return;
     }
 
@@ -178,33 +191,50 @@
       return;
     }
 
+    if (event.target.id === "stepType") {
+      ns.blocks.setStepType(event.target.value);
+      return;
+    }
+
     if (event.target.dataset.action === "move-block-step") {
       ns.blocks.moveBlockToStep(event.target.dataset.blockId, event.target.value);
     }
   }
 
   function handleDragStart(event) {
-    const item = event.target.closest("[data-sort-block-id]");
-    if (!item) return;
-    draggedBlockId = item.dataset.sortBlockId;
-    event.dataTransfer.effectAllowed = "move";
-    event.dataTransfer.setData("text/plain", draggedBlockId);
+    const blockItem = event.target.closest("[data-sort-block-id]");
+    if (blockItem) {
+      draggedBlockId = blockItem.dataset.sortBlockId;
+      event.dataTransfer.effectAllowed = "move";
+      event.dataTransfer.setData("text/plain", draggedBlockId);
+      return;
+    }
+    const stepItem = event.target.closest("[data-sort-step-id]");
+    if (stepItem) {
+      draggedStepId = stepItem.dataset.sortStepId;
+      event.dataTransfer.effectAllowed = "move";
+      event.dataTransfer.setData("text/plain", draggedStepId);
+    }
   }
 
   function handleDragOver(event) {
     const dropzone = event.target.closest("[data-dropzone-block-id]");
     const sortItem = event.target.closest("[data-sort-block-id]");
-    if (!dropzone && !sortItem) return;
+    const stepItem = event.target.closest("[data-sort-step-id]");
+    if (!dropzone && !sortItem && !stepItem) return;
     event.preventDefault();
     if (dropzone) dropzone.classList.add("dragover");
     if (sortItem && draggedBlockId) sortItem.classList.add("drag-over");
+    if (stepItem && draggedStepId) stepItem.classList.add("drag-over");
   }
 
   function handleDragLeave(event) {
     const dropzone = event.target.closest("[data-dropzone-block-id]");
     const sortItem = event.target.closest("[data-sort-block-id]");
+    const stepItem = event.target.closest("[data-sort-step-id]");
     if (dropzone) dropzone.classList.remove("dragover");
     if (sortItem) sortItem.classList.remove("drag-over");
+    if (stepItem) stepItem.classList.remove("drag-over");
   }
 
   function handleDrop(event) {
@@ -225,6 +255,17 @@
       ns.blocks.reorderBlock(draggedBlockId, sortItem.dataset.sortBlockId, insertAfter);
       clearSortDragClasses();
       draggedBlockId = null;
+      return;
+    }
+
+    const stepItem = event.target.closest("[data-sort-step-id]");
+    if (stepItem && draggedStepId) {
+      event.preventDefault();
+      const rect = stepItem.getBoundingClientRect();
+      const insertAfter = event.clientY > rect.top + rect.height / 2;
+      ns.blocks.reorderStep(draggedStepId, stepItem.dataset.sortStepId, insertAfter);
+      clearStepDragClasses();
+      draggedStepId = null;
     }
   }
 
@@ -236,9 +277,13 @@
   }
 
   function handleKeyDown(event) {
+    if (event.key === "Delete" || event.key === "Backspace") {
+      if (ns.annotations.handleDeleteKey()) { event.preventDefault(); return; }
+    }
     if (event.key === "Escape") {
       if (ns.annotations.handleEscape()) return;
       ns.annotations.closeAnnotationModal();
+      ns.exporter.cancelStepImport();
     }
   }
 
@@ -254,16 +299,6 @@
     state.store.activeTab = "cover";
     ns.render.renderAll();
     utils.toast("新規手順書を作成しました。");
-  }
-
-  async function importJson(file, input) {
-    if (!file) return;
-    if (state.store.dirty && !confirm("未保存の変更があります。JSONを読み込みますか？")) {
-      input.value = "";
-      return;
-    }
-    await ns.exporter.importJsonFile(file);
-    input.value = "";
   }
 
   function selectStep(stepId) {
@@ -283,6 +318,12 @@
 
   function clearSortDragClasses() {
     utils.$$("[data-sort-block-id]").forEach(function (item) {
+      item.classList.remove("drag-over");
+    });
+  }
+
+  function clearStepDragClasses() {
+    utils.$$("[data-sort-step-id]").forEach(function (item) {
       item.classList.remove("drag-over");
     });
   }
