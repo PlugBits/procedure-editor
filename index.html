@@ -11,86 +11,94 @@
     <div class="header-inner">
       <div class="title-group">
         <h1>Procedure Editor</h1>
-        <p>PC操作手順書をローカルHTMLだけで作成します。</p>
+        <p data-i18n="app.subtitle">PC操作手順書をローカルHTMLだけで作成します。</p>
       </div>
       <div class="header-actions no-print">
-        <span id="dirtyState" class="save-state" aria-live="polite">保存済み</span>
-        <button type="button" class="secondary" data-action="new-project">新規</button>
+        <button type="button" class="secondary" data-action="toggle-ui-lang" id="uiLangToggle">English</button>
+        <span id="dirtyState" class="save-state" aria-live="polite" data-i18n="ui.saved">保存済み</span>
+        <button type="button" class="secondary" data-action="new-project" data-i18n="ui.new">新規</button>
         <label class="button secondary file-button">
-          HTML読込
+          <span data-i18n="ui.loadHtml">HTML読込</span>
           <input id="htmlFileInput" type="file" accept="text/html,.html" />
         </label>
-        <button type="button" class="secondary" data-action="download-markdown">Markdown保存</button>
-        <button type="button" class="secondary" data-action="export-viewer">HTML保存</button>
-        <button type="button" data-action="print">PDF/印刷</button>
+        <button type="button" class="secondary" data-action="download-markdown" data-i18n="ui.saveMarkdown">Markdown保存</button>
+        <button type="button" class="secondary" data-action="export-viewer" data-i18n="ui.saveHtml">HTML保存</button>
+        <button type="button" data-action="print" data-i18n="ui.print">PDF/印刷</button>
       </div>
     </div>
   </header>
 
   <main class="app-main">
-    <nav class="tabs no-print" aria-label="編集タブ">
-      <button type="button" class="tab active" data-tab="cover">表紙</button>
-      <button type="button" class="tab" data-tab="steps">手順編集</button>
-      <button type="button" class="tab" data-tab="preview">プレビュー</button>
-      <button type="button" class="tab" data-tab="markdown">Markdown</button>
+    <nav class="tabs no-print" data-i18n-aria-label="aria.editTabs" aria-label="編集タブ">
+      <button type="button" class="tab active" data-tab="cover" data-i18n="tabs.cover">表紙</button>
+      <button type="button" class="tab" data-tab="steps" data-i18n="tabs.steps">手順編集</button>
+      <button type="button" class="tab" data-tab="preview" data-i18n="tabs.preview">プレビュー</button>
+      <button type="button" class="tab" data-tab="markdown" data-i18n="tabs.markdown">Markdown</button>
     </nav>
 
     <section id="coverTab" class="tab-panel pane">
       <div class="pane-head">
-        <h2>表紙情報</h2>
+        <h2 data-i18n="cover.sectionTitle">表紙情報</h2>
       </div>
       <div class="cover-grid">
         <label class="field">
-          <span>手順書名</span>
+          <span data-i18n="cover.docLang">手順書の言語</span>
+          <select id="docLang">
+            <option value="ja">日本語</option>
+            <option value="en">English</option>
+          </select>
+        </label>
+        <label class="field">
+          <span data-i18n="cover.title">手順書名</span>
           <input id="docTitle" type="text" data-cover-field="title" autocomplete="off" />
         </label>
         <label class="field">
-          <span>対象作業</span>
+          <span data-i18n="cover.targetWork">対象作業</span>
           <input id="targetWork" type="text" data-cover-field="targetWork" autocomplete="off" />
         </label>
         <label class="field">
-          <span>対象者</span>
+          <span data-i18n="cover.audience">対象者</span>
           <input id="audience" type="text" data-cover-field="audience" autocomplete="off" />
         </label>
         <label class="field">
-          <span>使用システム</span>
+          <span data-i18n="cover.systemName">使用システム</span>
           <input id="systemName" type="text" data-cover-field="systemName" autocomplete="off" />
         </label>
         <label class="field">
-          <span>必要な権限・アカウント</span>
+          <span data-i18n="cover.account">必要な権限・アカウント</span>
           <input id="account" type="text" data-cover-field="account" autocomplete="off" />
         </label>
         <label class="field">
-          <span>版数</span>
+          <span data-i18n="cover.revision">版数</span>
           <input id="revision" type="text" data-cover-field="revision" autocomplete="off" />
         </label>
         <label class="field">
-          <span>作成日</span>
+          <span data-i18n="cover.createdAt">作成日</span>
           <input id="createdAt" type="date" data-cover-field="createdAt" />
         </label>
         <label class="field">
-          <span>改訂日</span>
+          <span data-i18n="cover.updatedAt">改訂日</span>
           <input id="updatedAt" type="date" data-cover-field="updatedAt" />
         </label>
         <label class="field">
-          <span>作成者</span>
+          <span data-i18n="cover.author">作成者</span>
           <input id="author" type="text" data-cover-field="author" autocomplete="off" />
         </label>
         <label class="field">
-          <span>承認者</span>
+          <span data-i18n="cover.approver">承認者</span>
           <input id="approver" type="text" data-cover-field="approver" autocomplete="off" />
         </label>
       </div>
       <label class="field wide">
-        <span>目的</span>
+        <span data-i18n="cover.purpose">目的</span>
         <textarea id="purpose" data-cover-field="purpose"></textarea>
       </label>
       <label class="field wide">
-        <span>事前準備</span>
+        <span data-i18n="cover.preparation">事前準備</span>
         <textarea id="preparation" data-cover-field="preparation"></textarea>
       </label>
       <label class="field wide">
-        <span>注意事項</span>
+        <span data-i18n="cover.notes">注意事項</span>
         <textarea id="notes" data-cover-field="notes"></textarea>
       </label>
     </section>
@@ -99,47 +107,47 @@
       <div class="workspace-grid">
         <aside class="pane step-pane no-print">
           <div class="pane-head">
-            <h2>STEP一覧</h2>
-            <button type="button" data-action="add-step">STEP追加</button>
+            <h2 data-i18n="steps.listTitle">STEP一覧</h2>
+            <button type="button" data-action="add-step" data-i18n="steps.addStep">STEP追加</button>
           </div>
           <div id="stepList" class="step-list" aria-live="polite"></div>
         </aside>
 
         <section class="pane editor-pane">
-          <div id="noStep" class="empty-state">
+          <div id="noStep" class="empty-state" data-i18n="steps.emptyHint">
             左の「STEP追加」から手順を作成してください。
           </div>
           <div id="stepEditor" class="hidden">
             <div class="editor-head">
               <label class="field">
-                <span>STEPタイトル</span>
+                <span data-i18n="steps.title">STEPタイトル</span>
                 <input id="stepTitle" type="text" data-step-field="title" autocomplete="off" />
               </label>
               <label class="field">
-                <span>画面名</span>
+                <span data-i18n="steps.screen">画面名</span>
                 <input id="screenName" type="text" data-step-field="screen" autocomplete="off" />
               </label>
               <label class="field no-print step-type-field">
-                <span>STEPタイプ</span>
+                <span data-i18n="steps.type">STEPタイプ</span>
                 <select id="stepType">
-                  <option value="normal">通常</option>
-                  <option value="irregular">非定常業務</option>
-                  <option value="error">エラー対応</option>
+                  <option value="normal" data-i18n="steps.type.normal">通常</option>
+                  <option value="irregular" data-i18n="steps.type.irregular">非定常業務</option>
+                  <option value="error" data-i18n="steps.type.error">エラー対応</option>
                 </select>
               </label>
             </div>
             <label class="field wide">
-              <span>STEP概要</span>
+              <span data-i18n="steps.summary">STEP概要</span>
               <textarea id="stepSummary" data-step-field="summary"></textarea>
             </label>
             <label class="field wide">
-              <span>注意・確認ポイント</span>
+              <span data-i18n="steps.check">注意・確認ポイント</span>
               <textarea id="stepCheck" data-step-field="check"></textarea>
             </label>
             <div class="section-toolbar no-print">
-              <h3>説明ブロック</h3>
+              <h3 data-i18n="blocks.sectionTitle">説明ブロック</h3>
               <div class="toolbar-actions">
-                <button type="button" data-action="add-block">ブロック追加</button>
+                <button type="button" data-action="add-block" data-i18n="blocks.add">ブロック追加</button>
               </div>
             </div>
             <div id="blockList" class="block-list"></div>
@@ -148,9 +156,9 @@
 
         <aside class="pane sort-pane no-print">
           <div class="pane-head">
-            <h2>ブロック並び替え</h2>
+            <h2 data-i18n="sort.title">ブロック並び替え</h2>
           </div>
-          <p class="hint">ドラッグ&ドロップで現在のSTEP内の順序を変更できます。</p>
+          <p class="hint" data-i18n="sort.hint">ドラッグ&ドロップで現在のSTEP内の順序を変更できます。</p>
           <div id="sortList" class="sort-list"></div>
         </aside>
       </div>
@@ -162,8 +170,8 @@
 
     <section id="markdownTab" class="tab-panel pane hidden">
       <div class="pane-head">
-        <h2>Markdown</h2>
-        <button type="button" class="secondary no-print" data-action="copy-markdown">コピー</button>
+        <h2 data-i18n="markdown.title">Markdown</h2>
+        <button type="button" class="secondary no-print" data-action="copy-markdown" data-i18n="markdown.copy">コピー</button>
       </div>
       <textarea id="markdownOutput" class="markdown-output" readonly></textarea>
     </section>
@@ -175,24 +183,25 @@
     <div class="step-import-backdrop" data-action="cancel-step-import"></div>
     <div class="step-import-panel">
       <div class="step-import-head">
-        <h2>STEPをインポート</h2>
-        <p>追加するSTEPを選択してください。</p>
+        <h2 data-i18n="import.title">STEPをインポート</h2>
+        <p data-i18n="import.hint">追加するSTEPを選択してください。</p>
       </div>
       <div class="step-import-body">
         <label class="step-import-all-row">
-          <input type="checkbox" id="stepImportSelectAll" checked> 全選択
+          <input type="checkbox" id="stepImportSelectAll" checked> <span data-i18n="import.selectAll">全選択</span>
         </label>
         <ul id="stepImportList" class="step-import-list"></ul>
       </div>
       <div class="step-import-foot">
-        <button type="button" class="replace-btn" data-action="replace-all-import">全て置き換える</button>
-        <button type="button" class="secondary" data-action="cancel-step-import">キャンセル</button>
-        <button type="button" data-action="confirm-step-import">選択STEPを追加</button>
+        <button type="button" class="replace-btn" data-action="replace-all-import" data-i18n="import.replaceAll">全て置き換える</button>
+        <button type="button" class="secondary" data-action="cancel-step-import" data-i18n="import.cancel">キャンセル</button>
+        <button type="button" data-action="confirm-step-import" data-i18n="import.confirm">選択STEPを追加</button>
       </div>
     </div>
   </div>
 
   <script src="src/js/utils.js" defer></script>
+  <script src="src/js/i18n.js" defer></script>
   <script src="src/js/state.js" defer></script>
   <script src="src/js/annotations.js" defer></script>
   <script src="src/js/export.js" defer></script>

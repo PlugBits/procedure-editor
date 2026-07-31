@@ -3,6 +3,7 @@
 
   const utils = ns.utils;
   const state = ns.state;
+  const t = function (key, vars) { return ns.i18n.t(key, vars); };
 
   let dragState = null;
   let modalBlockId = null;
@@ -27,7 +28,7 @@
 
   function addAnnotation(type, blockId) {
     const found = state.findBlockById(blockId || state.store.currentBlockId);
-    if (!found || !found.block.image) { utils.toast("注釈を追加する画像がありません。"); return; }
+    if (!found || !found.block.image) { utils.toast(t("toast.noImageForAnnotation")); return; }
 
     state.store.currentStepId  = found.step.id;
     state.store.currentBlockId = found.block.id;
@@ -35,7 +36,7 @@
 
     if (type === "circle" || type === "number" || type === "arrow" || type === "marker") {
       placementState = { type: type, blockId: found.block.id, arrowStart: null, markerStart: null };
-      const hints = { circle: "画像上をクリックして○を配置してください。", number: "画像上をクリックして番号を配置してください。", arrow: "矢印の始点から終点までドラッグしてください。", marker: "マーカーの開始位置から横にドラッグしてください。" };
+      const hints = { circle: t("hint.placeCircle"), number: t("hint.placeNumber"), arrow: t("hint.placeArrow"), marker: t("hint.placeMarker") };
       utils.toast(hints[type] || "");
       if (modalBlockId) renderAnnotationModal();
       return;
@@ -58,7 +59,7 @@
 
   function deleteSelectedAnnotation() {
     const found = state.findBlockById(state.store.currentBlockId);
-    if (!found || !state.store.selectedAnnotationId) { utils.toast("削除する注釈を選択してください。"); return; }
+    if (!found || !state.store.selectedAnnotationId) { utils.toast(t("toast.selectAnnotationToDelete")); return; }
     const before = found.block.annotations.length;
     found.block.annotations = found.block.annotations.filter(function (a) { return a.id !== state.store.selectedAnnotationId; });
     if (found.block.annotations.length === before) return;
@@ -102,7 +103,7 @@
 
   function openAnnotationModal(blockId) {
     const found = state.findBlockById(blockId);
-    if (!found || !found.block.image) { utils.toast("注釈を編集する画像がありません。"); return; }
+    if (!found || !found.block.image) { utils.toast(t("toast.noImageToEditAnnotation")); return; }
     modalBlockId = found.block.id;
     state.store.currentStepId  = found.step.id;
     state.store.currentBlockId = found.block.id;
@@ -145,25 +146,25 @@
 
     modal.innerHTML = [
       '<div class="annotation-modal-backdrop" data-action="close-annotation-modal"></div>',
-      '<section class="annotation-modal-panel" role="dialog" aria-modal="true" aria-label="注釈編集">',
+      '<section class="annotation-modal-panel" role="dialog" aria-modal="true" aria-label="' + utils.escapeAttribute(t("aria.annotationModal")) + '">',
       '<header class="annotation-modal-head">',
-      '<div><h2>注釈編集</h2><p>' + utils.escapeHtml(block.imageName || "スクリーンショット") + '</p></div>',
-      '<button type="button" class="secondary" data-action="close-annotation-modal">閉じる</button>',
+      '<div><h2>' + utils.escapeHtml(t("ui.annotationEdit")) + '</h2><p>' + utils.escapeHtml(block.imageName || t("fields.screenshot")) + '</p></div>',
+      '<button type="button" class="secondary" data-action="close-annotation-modal">' + utils.escapeHtml(t("ui.close")) + '</button>',
       '</header>',
 
       '<div class="annotation-modal-toolbar">',
       // Mode toggle
       '<div class="anno-mode-toggle">',
-      '<button type="button" class="anno-mode-btn' + (isAdd ? " active" : "") + '" data-action="set-annotation-mode" data-mode="add">＋ 追加</button>',
-      '<button type="button" class="anno-mode-btn' + (!isAdd ? " active" : "") + '" data-action="set-annotation-mode" data-mode="edit">✐ 編集</button>',
+      '<button type="button" class="anno-mode-btn' + (isAdd ? " active" : "") + '" data-action="set-annotation-mode" data-mode="add">' + utils.escapeHtml(t("ui.modeAdd")) + '</button>',
+      '<button type="button" class="anno-mode-btn' + (!isAdd ? " active" : "") + '" data-action="set-annotation-mode" data-mode="edit">' + utils.escapeHtml(t("ui.modeEdit")) + '</button>',
       '</div>',
       '<div class="anno-toolbar-sep"></div>',
       // Tool buttons (add mode only)
       isAdd ? [
-        annotationToolButton(block, "circle",  "○ 丸"),
-        annotationToolButton(block, "arrow",   "→ 矢印"),
-        annotationToolButton(block, "number",  "① 番号"),
-        annotationToolButton(block, "marker",  "━ マーカー"),
+        annotationToolButton(block, "circle",  t("ui.toolCircle")),
+        annotationToolButton(block, "arrow",   t("ui.toolArrow")),
+        annotationToolButton(block, "number",  t("ui.toolNumber")),
+        annotationToolButton(block, "marker",  t("ui.toolMarker")),
         '<div class="anno-toolbar-sep"></div>'
       ].join("") : "",
       // Color picker
@@ -171,7 +172,7 @@
       // Size control (edit mode + resizable annotation selected)
       sizeCtrl ? '<div class="anno-toolbar-sep"></div>' + sizeCtrl : "",
       '<div class="anno-toolbar-sep"></div>',
-      '<button type="button" class="danger" data-action="delete-annotation" data-block-id="' + utils.escapeAttribute(block.id) + '">削除 <kbd>Del</kbd></button>',
+      '<button type="button" class="danger" data-action="delete-annotation" data-block-id="' + utils.escapeAttribute(block.id) + '">' + t("ui.deleteWithKey") + '</button>',
       '</div>',
 
       '<div class="annotation-modal-stage">',
@@ -188,7 +189,7 @@
     if (!selected || selected.type !== "circle") return "";
     const value = Number(selected.w) || 10;
     const max   = "30";
-    const label = "サイズ";
+    const label = t("ui.sizeLabel");
     return [
       '<label class="anno-size-control">',
       '<span>' + label + '</span>',
@@ -216,7 +217,7 @@
     const selected = state.findAnnotation(block, state.store.selectedAnnotationId);
     const currentColor = selected ? (selected.color || annotationColor) : annotationColor;
     return [
-      '<div class="annotation-color-picker" role="group" aria-label="注釈色">'
+      '<div class="annotation-color-picker" role="group" aria-label="' + utils.escapeAttribute(t("aria.annotationColor")) + '">'
     ].concat(ANNOTATION_COLORS.map(function (c) {
       const active = currentColor.toLowerCase() === c.value.toLowerCase();
       return [
@@ -328,7 +329,7 @@
     return [
       '<div class="image-frame">',
       '<div class="' + classes + '" data-block-id="' + utils.escapeAttribute(block.id) + '">',
-      '<img src="' + utils.escapeAttribute(block.image) + '" alt="' + utils.escapeAttribute(block.imageName || "スクリーンショット") + '">',
+      '<img src="' + utils.escapeAttribute(block.image) + '" alt="' + utils.escapeAttribute(block.imageName || t("fields.screenshot")) + '">',
       annotations,
       '</div>',
       '</div>'
@@ -350,9 +351,9 @@
     const handle = editable && selected ? '<span class="resize-handle" data-resize-handle="true"></span>' : "";
 
     if (annotation.type === "number") {
-      return '<div class="' + className + '"' + data + ' style="' + style + '" aria-label="番号注釈"><span>' + utils.escapeHtml(annotation.label || "1") + '</span>' + handle + '</div>';
+      return '<div class="' + className + '"' + data + ' style="' + style + '" aria-label="' + utils.escapeAttribute(t("aria.numberAnnotation")) + '"><span>' + utils.escapeHtml(annotation.label || "1") + '</span>' + handle + '</div>';
     }
-    return '<div class="' + className + '"' + data + ' style="' + style + '" aria-label="' + (annotation.type === "marker" ? "マーカー注釈" : "丸注釈") + '">' + handle + '</div>';
+    return '<div class="' + className + '"' + data + ' style="' + style + '" aria-label="' + utils.escapeAttribute(annotation.type === "marker" ? t("aria.markerAnnotation") : t("aria.circleAnnotation")) + '">' + handle + '</div>';
   }
 
   function arrowMarkup(annotation, className, data, editable, selected) {
@@ -368,7 +369,7 @@
 
     return [
       '<div class="' + className + '"' + data,
-      ' style="left:' + geometry.left.toFixed(3) + '%;top:' + geometry.top.toFixed(3) + '%;width:' + geometry.width.toFixed(3) + '%;height:' + geometry.height.toFixed(3) + '%;color:' + utils.escapeAttribute(color) + ';" aria-label="矢印注釈">',
+      ' style="left:' + geometry.left.toFixed(3) + '%;top:' + geometry.top.toFixed(3) + '%;width:' + geometry.width.toFixed(3) + '%;height:' + geometry.height.toFixed(3) + '%;color:' + utils.escapeAttribute(color) + ';" aria-label="' + utils.escapeAttribute(t("aria.arrowAnnotation")) + '">',
       '<svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">',
       '<line x1="' + geometry.x1.toFixed(3) + '" y1="' + geometry.y1.toFixed(3) + '" x2="' + lineEnd.x.toFixed(3) + '" y2="' + lineEnd.y.toFixed(3) + '" stroke="' + utils.escapeAttribute(color) + '"></line>',
       '<polygon points="' + headPts + '" fill="' + utils.escapeAttribute(color) + '"></polygon>',

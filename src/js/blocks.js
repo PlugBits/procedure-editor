@@ -3,6 +3,7 @@
 
   const utils = ns.utils;
   const state = ns.state;
+  const t = function (key, vars) { return ns.i18n.t(key, vars); };
 
   function addStep() {
     const normalCount = state.store.project.steps.filter(function (s) { return s.type === "normal"; }).length;
@@ -19,13 +20,13 @@
     state.markDirty();
     ns.render.showTab("steps");
     ns.render.renderAll();
-    utils.toast("STEPを追加しました。");
+    utils.toast(t("toast.stepAdded"));
   }
 
   function deleteStep(stepId) {
     const found = state.findStepById(stepId || state.store.currentStepId);
     if (!found) return;
-    if (!confirm("このSTEPを削除しますか？")) return;
+    if (!confirm(t("confirm.deleteStep"))) return;
     state.store.project.steps.splice(found.stepIndex, 1);
     const next = state.store.project.steps[Math.max(0, found.stepIndex - 1)] || state.store.project.steps[0] || null;
     state.store.currentStepId = next ? next.id : null;
@@ -33,7 +34,7 @@
     state.store.selectedAnnotationId = null;
     state.markDirty();
     ns.render.renderAll();
-    utils.toast("STEPを削除しました。");
+    utils.toast(t("toast.stepDeleted"));
   }
 
   function deleteCurrentStep() {
@@ -79,13 +80,13 @@
     ns.render.renderPreview();
     ns.render.renderMarkdown();
     ns.render.updateDirtyIndicator();
-    utils.toast("説明ブロックを追加しました。");
+    utils.toast(t("toast.blockAdded"));
   }
 
   function deleteBlock(blockId) {
     const found = state.findBlockById(blockId);
     if (!found) return;
-    if (!confirm("この説明ブロックを削除しますか？")) return;
+    if (!confirm(t("confirm.deleteBlock"))) return;
     found.step.blocks.splice(found.blockIndex, 1);
     const next = found.step.blocks[Math.max(0, found.blockIndex - 1)] || found.step.blocks[0] || null;
     state.store.currentStepId = found.step.id;
@@ -93,7 +94,7 @@
     state.store.selectedAnnotationId = null;
     state.markDirty();
     renderAfterStructureChange();
-    utils.toast("説明ブロックを削除しました。");
+    utils.toast(t("toast.blockDeleted"));
   }
 
   function moveBlock(blockId, offset) {
@@ -136,20 +137,20 @@
     const selectionStart = input && typeof input.selectionStart === "number" ? input.selectionStart : currentText.length;
     const selectionEnd = input && typeof input.selectionEnd === "number" ? input.selectionEnd : selectionStart;
 
-    const rawUrl = prompt("リンクURLを入力してください。");
+    const rawUrl = prompt(t("prompt.linkUrl"));
     if (rawUrl == null) return;
     const url = utils.normalizeLinkUrl(rawUrl);
     if (!url) {
-      utils.toast("http(s) または mailto のリンクURLを入力してください。");
+      utils.toast(t("toast.invalidLinkUrl"));
       return;
     }
 
     const selectedText = currentText.slice(selectionStart, selectionEnd).trim();
-    const rawLabel = prompt("表示文言を入力してください。", selectedText || "");
+    const rawLabel = prompt(t("prompt.linkLabel"), selectedText || "");
     if (rawLabel == null) return;
     const label = rawLabel.trim();
     if (!label) {
-      utils.toast("表示文言を入力してください。");
+      utils.toast(t("toast.linkLabelRequired"));
       return;
     }
 
@@ -200,7 +201,7 @@
       ns.render.renderPreview();
       ns.render.renderMarkdown();
       ns.render.updateDirtyIndicator();
-      utils.toast("画像を追加しました。");
+      utils.toast(t("toast.imageAdded"));
     } catch (error) {
       utils.toast(error.message);
     }
@@ -209,7 +210,7 @@
   function clearBlockImage(blockId) {
     const found = state.findBlockById(blockId);
     if (!found) return;
-    if (!confirm("画像と注釈を削除しますか？")) return;
+    if (!confirm(t("confirm.deleteImage"))) return;
     found.block.image = "";
     found.block.imageName = "";
     found.block.annotations = [];
@@ -235,7 +236,7 @@
     state.store.selectedAnnotationId = null;
     state.markDirty();
     ns.render.renderAll();
-    utils.toast("ブロックの帰属STEPを変更しました。");
+    utils.toast(t("toast.blockMoved"));
   }
 
   function reorderStep(draggedId, targetId, insertAfter) {
@@ -318,7 +319,7 @@
 
     state.markDirty();
     ns.render.renderAll();
-    utils.toast("STEPタイプを変更しました。");
+    utils.toast(t("toast.stepTypeChanged"));
   }
 
   function addJumpToBlock(blockId, targetStepId) {
@@ -330,7 +331,7 @@
       return j.targetStepId === targetStepId;
     });
     if (exists) {
-      utils.toast("このエラー対応STEPへのジャンプはすでに追加されています。");
+      utils.toast(t("toast.jumpAlreadyAdded"));
       return;
     }
 
@@ -345,7 +346,7 @@
     ns.render.renderPreview();
     ns.render.renderMarkdown();
     ns.render.updateDirtyIndicator();
-    utils.toast("ジャンプを追加しました。");
+    utils.toast(t("toast.jumpAdded"));
   }
 
   function removeJumpFromBlock(blockId, jumpId) {
