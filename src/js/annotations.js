@@ -772,8 +772,7 @@
   }
 
   function handleEscape() {
-    if (cancelPlacement()) return true;
-    return Boolean(modalBlockId);
+    return cancelPlacement();
   }
 
   function normalizeAnnotationColor(color) {
