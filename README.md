@@ -25,6 +25,24 @@ PC操作手順書を作成するための静的Webアプリです。サーバー
 - PDF/印刷
 - 閲覧用単一HTML出力
 
+## 言語設定（UI言語と手順書言語）
+
+このアプリには独立した2つの言語設定があります。
+
+- **UI言語**（ヘッダー右上の切替ボタン）: エディタ画面自体の表示言語です。`ja`/`en` を切り替えでき、選択内容はブラウザの `localStorage` に保存されます。STEP一覧、ブロックカード、注釈編集モーダル、トースト通知、確認ダイアログなどエディタの操作画面に反映されます。
+- **手順書言語**（表紙タブの「手順書の言語」欄）: 作成する手順書（成果物）の言語です。プロジェクトデータに `docLang` として保存され、JSON保存・読込や閲覧HTML出力でも維持されます。プレビュー表示、Markdown出力、閲覧用HTML出力、保存ファイル名のフォールバック、新規STEP/ブロックのデフォルトタイトルに反映されます。
+
+この2つは独立しているため、例えば「エディタ画面は英語で操作しながら、日本語の手順書を作成する」といった使い方も可能です。
+
+## Language settings (UI language vs. document language)
+
+This app has two independent language settings:
+
+- **UI language** (toggle button in the header): controls the language of the editor screen itself (`ja`/`en`), persisted in the browser's `localStorage`.
+- **Document language** (the "Document Language" field on the Cover tab): controls the language of the procedure manual you are producing. It is stored as `docLang` in the project data (JSON / view-only HTML) and drives the Preview, Markdown output, view-only HTML export, default STEP/block titles, and the fallback save file name.
+
+Because the two are independent, you can, for example, operate the editor UI in English while authoring a Japanese-language procedure manual, or vice versa.
+
 ## ファイル構成
 
 ```text
@@ -36,6 +54,7 @@ procedure-editor/
 │  │  └─ style.css
 │  └─ js/
 │     ├─ app.js
+│     ├─ i18n.js
 │     ├─ state.js
 │     ├─ render.js
 │     ├─ blocks.js
@@ -55,4 +74,6 @@ JSON保存時のファイル名は次の形式です。
 手順書名_YYYYMMDD_HHMMSS.json
 ```
 
-閲覧用HTMLは単一HTMLファイルとして出力され、画像はbase64で埋め込まれます。
+手順書名が未入力の場合のフォールバック名は手順書言語に応じて変わります（日本語: `手順書`、英語: `procedure`）。
+
+閲覧用HTMLは単一HTMLファイルとして出力され、画像はbase64で埋め込まれます。出力されるHTMLの `lang` 属性および全文言は、手順書言語（`docLang`）に従います。

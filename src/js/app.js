@@ -3,14 +3,23 @@
 
   const utils = ns.utils;
   const state = ns.state;
+  const t = function (key, vars) { return ns.i18n.t(key, vars); };
   let draggedBlockId = null;
   let draggedStepId = null;
 
   document.addEventListener("DOMContentLoaded", init);
 
   function init() {
+    ns.i18n.applyStaticTranslations();
     bindEvents();
     ns.render.renderAll();
+    updateUiLangToggleLabel();
+  }
+
+  function updateUiLangToggleLabel() {
+    const toggle = utils.$("uiLangToggle");
+    if (!toggle) return;
+    toggle.textContent = ns.i18n.getUiLang() === "en" ? "日本語" : "English";
   }
 
   function bindEvents() {
@@ -40,6 +49,9 @@
     if (actionNode) {
       const action = actionNode.dataset.action;
       switch (action) {
+        case "toggle-ui-lang":
+          toggleUiLang();
+          return;
         case "new-project":
           newProject();
           return;
@@ -117,7 +129,7 @@
           if (targetStepId) {
             ns.blocks.addJumpToBlock(actionNode.dataset.blockId, targetStepId);
           } else {
-            utils.toast("ジャンプ先のSTEPを選択してください。");
+            utils.toast(t("toast.selectJumpTarget"));
           }
           return;
         }
@@ -198,6 +210,11 @@
 
     if (event.target.dataset.action === "move-block-step") {
       ns.blocks.moveBlockToStep(event.target.dataset.blockId, event.target.value);
+      return;
+    }
+
+    if (event.target.id === "docLang") {
+      changeDocLang(event.target.value);
     }
   }
 
@@ -294,11 +311,37 @@
   }
 
   function newProject() {
-    if (state.store.dirty && !confirm("未保存の変更があります。新規作成しますか？")) return;
+    if (state.store.dirty && !confirm(t("confirm.newProject"))) return;
     state.setProject(state.createProject());
     state.store.activeTab = "cover";
     ns.render.renderAll();
-    utils.toast("新規手順書を作成しました。");
+    utils.toast(t("toast.newProject"));
+  }
+
+  function toggleUiLang() {
+    const next = ns.i18n.getUiLang() === "en" ? "ja" : "en";
+    ns.i18n.setUiLang(next);
+    ns.i18n.applyStaticTranslations();
+    ns.render.renderAll();
+    updateUiLangToggleLabel();
+  }
+
+  function changeDocLang(value) {
+    const nextLang = value === "en" ? "en" : "ja";
+    const project = state.store.project;
+    const prevLang = project.docLang === "en" ? "en" : "ja";
+    if (nextLang === prevLang) return;
+
+    const jaDefaultTitle = ns.i18n.message("ja", "doc.defaultCoverTitle");
+    const enDefaultTitle = ns.i18n.message("en", "doc.defaultCoverTitle");
+    const currentTitle = project.cover.title || "";
+    if (currentTitle === jaDefaultTitle || currentTitle === enDefaultTitle) {
+      project.cover.title = ns.i18n.message(nextLang, "doc.defaultCoverTitle");
+    }
+
+    project.docLang = nextLang;
+    state.markDirty();
+    ns.render.renderAll();
   }
 
   function selectStep(stepId) {

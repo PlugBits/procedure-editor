@@ -3,44 +3,47 @@
 
   const utils = ns.utils;
   const state = ns.state;
+  const t = function (key, vars) { return ns.i18n.t(key, vars); };
+  const tDoc = function (key, vars) { return ns.i18n.tDoc(key, vars); };
 
   function exportViewerHtml() {
     const project = state.store.project;
-    const baseName = utils.sanitizeFileName(project.cover.title, "手順書");
+    const baseName = utils.sanitizeFileName(project.cover.title, tDoc("doc.fileFallbackName"));
     const html = buildViewerHtml(project);
     utils.downloadText(baseName + "_" + utils.timestamp() + ".html", html, "text/html;charset=utf-8");
     state.markClean();
     ns.render.updateDirtyIndicator();
-    utils.toast("HTMLを保存しました。");
+    utils.toast(t("toast.htmlSaved"));
   }
 
   function buildViewerHtml(project) {
     const cover = project.cover;
+    const docLang = project.docLang === "en" ? "en" : "ja";
     const allSteps = project.steps;
     const normalSteps    = allSteps.filter(function (s) { return s.type === "normal"; });
     const irregularSteps = allSteps.filter(function (s) { return s.type === "irregular"; });
     const errorSteps     = allSteps.filter(function (s) { return s.type === "error"; });
 
     const stepNums = {};
-    normalSteps.forEach(function (s, i) { stepNums[s.id] = { label: "STEP " + (i + 1), type: "normal" }; });
-    irregularSteps.forEach(function (s, i) { stepNums[s.id] = { label: "非定常 " + (i + 1), type: "irregular" }; });
-    errorSteps.forEach(function (s, i) { stepNums[s.id] = { label: "エラー対応 " + (i + 1), type: "error" }; });
+    normalSteps.forEach(function (s, i) { stepNums[s.id] = { label: tDoc("doc.badgeStep", { n: i + 1 }), type: "normal" }; });
+    irregularSteps.forEach(function (s, i) { stepNums[s.id] = { label: tDoc("doc.badgeIrregular", { n: i + 1 }), type: "irregular" }; });
+    errorSteps.forEach(function (s, i) { stepNums[s.id] = { label: tDoc("doc.badgeError", { n: i + 1 }), type: "error" }; });
 
     function tocEntry(href, label) {
       return '<li><a href="' + href + '">' + label + '</a></li>';
     }
 
     const normalToc = normalSteps.map(function (step, i) {
-      return tocEntry('#step-' + step.id, 'STEP ' + (i + 1) + ' ' + utils.escapeHtml(step.title || ''));
+      return tocEntry('#step-' + step.id, tDoc("doc.badgeStep", { n: i + 1 }) + ' ' + utils.escapeHtml(step.title || ''));
     }).join("");
     const irregularToc = irregularSteps.length
-      ? '<li class="toc-section-label toc-irregular-label">非定常業務手順</li>' + irregularSteps.map(function (step, i) {
-          return tocEntry('#step-' + step.id, '非定常 ' + (i + 1) + ' ' + utils.escapeHtml(step.title || ''));
+      ? '<li class="toc-section-label toc-irregular-label">' + utils.escapeHtml(tDoc("doc.section.irregularSteps")) + '</li>' + irregularSteps.map(function (step, i) {
+          return tocEntry('#step-' + step.id, tDoc("doc.badgeIrregular", { n: i + 1 }) + ' ' + utils.escapeHtml(step.title || ''));
         }).join("")
       : "";
     const errorToc = errorSteps.length
-      ? '<li class="toc-section-label toc-error-label">エラー対応手順</li>' + errorSteps.map(function (step, i) {
-          return tocEntry('#step-' + step.id, 'エラー対応 ' + (i + 1) + ' ' + utils.escapeHtml(step.title || ''));
+      ? '<li class="toc-section-label toc-error-label">' + utils.escapeHtml(tDoc("doc.section.errorSteps")) + '</li>' + errorSteps.map(function (step, i) {
+          return tocEntry('#step-' + step.id, tDoc("doc.badgeError", { n: i + 1 }) + ' ' + utils.escapeHtml(step.title || ''));
         }).join("")
       : "";
     const toc = normalToc + irregularToc + errorToc;
@@ -70,25 +73,25 @@
       return [
         '<section id="step-' + utils.escapeAttribute(step.id) + '" class="viewer-step' + typeClass + '">',
         '<h3>' + label + " " + utils.escapeHtml(step.title || "") + "</h3>",
-        step.screen ? '<p><strong>画面名:</strong> ' + utils.escapeHtml(step.screen) + "</p>" : "",
+        step.screen ? '<p><strong>' + utils.escapeHtml(tDoc("doc.screenNameLabel")) + '</strong> ' + utils.escapeHtml(step.screen) + "</p>" : "",
         step.summary ? '<p>' + utils.textToHtml(step.summary) + "</p>" : "",
-        step.check ? '<aside class="viewer-callout viewer-callout-warning"><h4>注意・確認ポイント</h4><p>' + utils.textToHtml(step.check) + "</p></aside>" : "",
+        step.check ? '<aside class="viewer-callout viewer-callout-warning"><h4>' + utils.escapeHtml(tDoc("doc.checkPoints")) + '</h4><p>' + utils.textToHtml(step.check) + "</p></aside>" : "",
         blocks,
         "</section>"
       ].join("");
     }
 
     const normalHtml = normalSteps.map(function (step, i) {
-      return buildStep(step, "STEP " + (i + 1), i + 1, "normal");
+      return buildStep(step, tDoc("doc.badgeStep", { n: i + 1 }), i + 1, "normal");
     }).join("");
     const irregularSectionHtml = irregularSteps.length
-      ? '<div class="viewer-irregular-section"><h2>非定常業務手順</h2>' + irregularSteps.map(function (step, i) {
-          return buildStep(step, "非定常 " + (i + 1), "N" + (i + 1), "irregular");
+      ? '<div class="viewer-irregular-section"><h2>' + utils.escapeHtml(tDoc("doc.section.irregularSteps")) + '</h2>' + irregularSteps.map(function (step, i) {
+          return buildStep(step, tDoc("doc.badgeIrregular", { n: i + 1 }), "N" + (i + 1), "irregular");
         }).join("") + "</div>"
       : "";
     const errorSectionHtml = errorSteps.length
-      ? '<div class="viewer-error-section"><h2>エラー対応手順</h2>' + errorSteps.map(function (step, i) {
-          return buildStep(step, "エラー対応 " + (i + 1), "E" + (i + 1), "error");
+      ? '<div class="viewer-error-section"><h2>' + utils.escapeHtml(tDoc("doc.section.errorSteps")) + '</h2>' + errorSteps.map(function (step, i) {
+          return buildStep(step, tDoc("doc.badgeError", { n: i + 1 }), "E" + (i + 1), "error");
         }).join("") + "</div>"
       : "";
     const steps = normalHtml + irregularSectionHtml + errorSectionHtml;
@@ -98,42 +101,42 @@
     }).join("");
 
     const coverSections = ns.exporter.coverSections(cover).map(function (section) {
-      if (!section[1]) return "";
-      const classes = "cover-section" + (section[0] === "注意事項" ? " viewer-callout viewer-callout-warning" : "");
-      return '<section class="' + classes + '"><h2>' + utils.escapeHtml(section[0]) + '</h2><p>' + utils.textToHtml(section[1]) + "</p></section>";
+      if (!section[2]) return "";
+      const classes = "cover-section" + (section[0] === "notes" ? " viewer-callout viewer-callout-warning" : "");
+      return '<section class="' + classes + '"><h2>' + utils.escapeHtml(section[1]) + '</h2><p>' + utils.textToHtml(section[2]) + "</p></section>";
     }).join("");
 
     const css = viewerCss();
-    const js = viewerScript().replace(/<\/script/gi, "<\\/script");
+    const js = viewerScript(tDoc("doc.backLabel")).replace(/<\/script/gi, "<\\/script");
     const embeddedJson = JSON.stringify(project).replace(/<\/script/gi, "<\\/script");
     const dataComment = buildDataComment(project);
 
     return [
       "<!DOCTYPE html>",
-      '<html lang="ja">',
+      '<html lang="' + docLang + '">',
       "<head>",
       '<meta charset="UTF-8">',
       '<meta name="viewport" content="width=device-width, initial-scale=1.0">',
-      "<title>" + utils.escapeHtml(cover.title || "PC操作手順書") + "</title>",
+      "<title>" + utils.escapeHtml(cover.title || tDoc("doc.defaultCoverTitle")) + "</title>",
       "<style>" + css + "</style>",
       "</head>",
       "<body>",
       '<script type="application/json" id="procedure-data">' + embeddedJson + "</script>",
       '<header class="viewer-header">',
-      '<div><h1>' + utils.escapeHtml(cover.title || "PC操作手順書") + '</h1><p>閲覧用手順書</p></div>',
-      '<input id="searchBox" type="search" placeholder="検索">',
+      '<div><h1>' + utils.escapeHtml(cover.title || tDoc("doc.defaultCoverTitle")) + '</h1><p>' + utils.escapeHtml(tDoc("doc.viewOnlyLabel")) + '</p></div>',
+      '<input id="searchBox" type="search" placeholder="' + utils.escapeAttribute(tDoc("doc.searchPlaceholder")) + '">',
       "</header>",
       '<main class="viewer-main">',
-      '<aside class="toc"><h2>目次</h2><ol>' + toc + "</ol></aside>",
+      '<aside class="toc"><h2>' + utils.escapeHtml(tDoc("doc.toc")) + '</h2><ol>' + toc + "</ol></aside>",
       '<article class="content">',
-      '<section class="cover"><h2>表紙情報</h2><table>' + coverRows + "</table></section>",
+      '<section class="cover"><h2>' + utils.escapeHtml(tDoc("doc.coverInfo")) + '</h2><table>' + coverRows + "</table></section>",
       coverSections,
-      '<h2>操作手順</h2>',
-      steps || '<p class="empty">STEPがありません。</p>',
+      '<h2>' + utils.escapeHtml(tDoc("doc.section.procedureSteps")) + '</h2>',
+      steps || '<p class="empty">' + utils.escapeHtml(tDoc("doc.stepsEmpty")) + '</p>',
       "</article>",
       "</main>",
-      '<div id="imageModal" class="image-modal" aria-hidden="true"><button type="button" class="modal-close" aria-label="閉じる">×</button><div class="modal-body"></div></div>',
-      '<a id="viewerBackFloat" class="viewer-back-float" href="#" aria-label="元の操作に戻る"></a>',
+      '<div id="imageModal" class="image-modal" aria-hidden="true"><button type="button" class="modal-close" aria-label="' + utils.escapeAttribute(tDoc("doc.close")) + '">×</button><div class="modal-body"></div></div>',
+      '<a id="viewerBackFloat" class="viewer-back-float" href="#" aria-label="' + utils.escapeAttribute(tDoc("doc.backAriaLabel")) + '"></a>',
       "<script>" + js + "</script>",
       dataComment,
       "</body>",
@@ -157,9 +160,9 @@
       return viewerAnnotationMarkup(annotation);
     }).join("");
     return [
-      '<figure class="viewer-image-frame" tabindex="0" role="button" aria-label="画像を拡大">',
+      '<figure class="viewer-image-frame" tabindex="0" role="button" aria-label="' + utils.escapeAttribute(tDoc("doc.enlargeImage")) + '">',
       '<div class="annotated-image" data-block-id="' + utils.escapeAttribute(block.id) + '">',
-      '<img src="' + utils.escapeAttribute(block.image) + '" alt="' + utils.escapeAttribute(block.imageName || "スクリーンショット") + '">',
+      '<img src="' + utils.escapeAttribute(block.image) + '" alt="' + utils.escapeAttribute(block.imageName || tDoc("doc.screenshotAlt")) + '">',
       annotations,
       "</div>",
       block.imageName ? '<figcaption>' + utils.escapeHtml(block.imageName) + "</figcaption>" : "",
@@ -300,7 +303,8 @@
     ].join(" ");
   }
 
-  function viewerScript() {
+  function viewerScript(backLabel) {
+    const backLabelLiteral = JSON.stringify(String(backLabel || ""));
     return [
       "(function(){",
       "var search=document.getElementById('searchBox');",
@@ -322,7 +326,7 @@
       "if(backFloat&&jumpReturn&&isTarget){",
       "var src=document.querySelector(jumpReturn);",
       "var h4=src&&src.querySelector('h4');",
-      "backFloat.textContent='← '+(h4?h4.textContent.trim():'元に戻る');",
+      "backFloat.textContent='← '+(h4?h4.textContent.trim():" + backLabelLiteral + ");",
       "backFloat.href=jumpReturn;backFloat.style.display='flex';",
       "}else{if(backFloat)backFloat.style.display='none';if(!isTarget)jumpReturn=null;}",
       "});",

@@ -32,10 +32,14 @@
     dirty: false
   };
 
-  function defaultCover() {
+  function defaultCoverTitle(docLang) {
+    return ns.i18n ? ns.i18n.message(docLang, "doc.defaultCoverTitle") : "PC操作手順書";
+  }
+
+  function defaultCover(docLang) {
     const today = utils.todayIso();
     return {
-      title: "PC操作手順書",
+      title: defaultCoverTitle(docLang),
       targetWork: "",
       audience: "",
       systemName: "",
@@ -51,10 +55,12 @@
     };
   }
 
-  function createProject() {
+  function createProject(docLang) {
+    const lang = docLang === "en" ? "en" : docLang === "ja" ? "ja" : (ns.i18n ? ns.i18n.getUiLang() : "ja");
     return {
       version: 2,
-      cover: defaultCover(),
+      cover: defaultCover(lang),
+      docLang: lang,
       steps: []
     };
   }
@@ -64,7 +70,7 @@
     return {
       id: utils.uid("step"),
       type: "normal",
-      title: "新しいSTEP " + stepNumber,
+      title: ns.i18n ? ns.i18n.tDoc("doc.newStep", { n: stepNumber }) : "新しいSTEP " + stepNumber,
       screen: "",
       summary: "",
       check: "",
@@ -75,7 +81,7 @@
   function createBlock(index) {
     return {
       id: utils.uid("block"),
-      title: "操作説明 " + (index || 1),
+      title: ns.i18n ? ns.i18n.tDoc("doc.newBlock", { n: index || 1 }) : "操作説明 " + (index || 1),
       text: "",
       image: "",
       imageName: "",
@@ -109,22 +115,26 @@
 
   function normalizeProject(raw) {
     const source = raw && typeof raw === "object" ? raw : {};
-    const normalized = createProject();
+    const docLang = source.docLang === "en" ? "en" : "ja";
+    const normalized = createProject(docLang);
     normalized.version = 2;
-    normalized.cover = normalizeCover(source.cover || {});
-    normalized.steps = Array.isArray(source.steps) ? source.steps.map(normalizeStep) : [];
+    normalized.docLang = docLang;
+    normalized.cover = normalizeCover(source.cover || {}, docLang);
+    normalized.steps = Array.isArray(source.steps)
+      ? source.steps.map(function (step, index) { return normalizeStep(step, index, docLang); })
+      : [];
     return normalized;
   }
 
-  function normalizeCover(cover) {
-    const normalized = defaultCover();
+  function normalizeCover(cover, docLang) {
+    const normalized = defaultCover(docLang);
     COVER_FIELDS.forEach(function (field) {
       if (cover[field] != null) normalized[field] = String(cover[field]);
     });
     return normalized;
   }
 
-  function normalizeStep(step, index) {
+  function normalizeStep(step, index, docLang) {
     const normalized = {
       id: step.id || utils.uid("step"),
       type: STEP_TYPES.includes(step.type) ? step.type : "normal",
@@ -137,12 +147,16 @@
     STEP_FIELDS.forEach(function (field) {
       if (step[field] != null) normalized[field] = String(step[field]);
     });
-    if (!normalized.title) normalized.title = "STEP " + (index + 1);
-    normalized.blocks = Array.isArray(step.blocks) ? step.blocks.map(normalizeBlock) : [];
+    if (!normalized.title) {
+      normalized.title = ns.i18n ? ns.i18n.message(docLang, "doc.stepFallbackTitle", { n: index + 1 }) : "STEP " + (index + 1);
+    }
+    normalized.blocks = Array.isArray(step.blocks)
+      ? step.blocks.map(function (block, blockIndex) { return normalizeBlock(block, blockIndex, docLang); })
+      : [];
     return normalized;
   }
 
-  function normalizeBlock(block, index) {
+  function normalizeBlock(block, index, docLang) {
     const normalized = {
       id: block.id || utils.uid("block"),
       title: "",
@@ -155,7 +169,9 @@
     BLOCK_FIELDS.forEach(function (field) {
       if (block[field] != null) normalized[field] = String(block[field]);
     });
-    if (!normalized.title) normalized.title = "操作説明 " + (index + 1);
+    if (!normalized.title) {
+      normalized.title = ns.i18n ? ns.i18n.message(docLang, "doc.newBlock", { n: index + 1 }) : "操作説明 " + (index + 1);
+    }
     normalized.annotations = Array.isArray(block.annotations)
       ? block.annotations.map(normalizeAnnotation).filter(Boolean)
       : [];

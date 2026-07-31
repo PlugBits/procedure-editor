@@ -3,33 +3,35 @@
 
   const utils = ns.utils;
   const state = ns.state;
+  const t = function (key, vars) { return ns.i18n.t(key, vars); };
+  const tDoc = function (key, vars) { return ns.i18n.tDoc(key, vars); };
 
   function coverRows(cover) {
     return [
-      ["対象作業", cover.targetWork],
-      ["対象者", cover.audience],
-      ["使用システム", cover.systemName],
-      ["必要な権限・アカウント", cover.account],
-      ["版数", cover.revision],
-      ["作成日", cover.createdAt],
-      ["改訂日", cover.updatedAt],
-      ["作成者", cover.author],
-      ["承認者", cover.approver]
+      [tDoc("doc.cover.targetWork"), cover.targetWork],
+      [tDoc("doc.cover.audience"), cover.audience],
+      [tDoc("doc.cover.systemName"), cover.systemName],
+      [tDoc("doc.cover.account"), cover.account],
+      [tDoc("doc.cover.revision"), cover.revision],
+      [tDoc("doc.cover.createdAt"), cover.createdAt],
+      [tDoc("doc.cover.updatedAt"), cover.updatedAt],
+      [tDoc("doc.cover.author"), cover.author],
+      [tDoc("doc.cover.approver"), cover.approver]
     ];
   }
 
   function coverSections(cover) {
     return [
-      ["目的", cover.purpose],
-      ["事前準備", cover.preparation],
-      ["注意事項", cover.notes]
+      ["purpose", tDoc("doc.cover.purpose"), cover.purpose],
+      ["preparation", tDoc("doc.cover.preparation"), cover.preparation],
+      ["notes", tDoc("doc.cover.notes"), cover.notes]
     ];
   }
 
   function generateMarkdown() {
     const project = state.store.project;
     const cover = project.cover;
-    let md = "# " + (cover.title || "PC操作手順書") + "\n\n";
+    let md = "# " + (cover.title || tDoc("doc.defaultCoverTitle")) + "\n\n";
 
     coverRows(cover).forEach(function (row) {
       md += "- **" + row[0] + "**: " + (row[1] || "") + "\n";
@@ -37,44 +39,44 @@
     md += "\n";
 
     coverSections(cover).forEach(function (section) {
-      if (!section[1]) return;
-      md += "## " + section[0] + "\n\n" + section[1] + "\n\n";
+      if (!section[2]) return;
+      md += "## " + section[1] + "\n\n" + section[2] + "\n\n";
     });
 
-    md += "## 操作手順\n\n";
+    md += "## " + tDoc("doc.section.procedureSteps") + "\n\n";
     const normalSteps    = project.steps.filter(function (s) { return s.type === "normal"; });
     const irregularSteps = project.steps.filter(function (s) { return s.type === "irregular"; });
     const errorSteps     = project.steps.filter(function (s) { return s.type === "error"; });
 
     function renderStepMd(step, label, stepNum) {
       md += "### " + label + ": " + (step.title || "") + "\n\n";
-      if (step.screen) md += "**画面名**: " + step.screen + "\n\n";
+      if (step.screen) md += "**" + tDoc("doc.screenName") + "**: " + step.screen + "\n\n";
       if (step.summary) md += step.summary + "\n\n";
-      if (step.check) md += "**注意・確認ポイント**\n\n" + step.check + "\n\n";
+      if (step.check) md += "**" + tDoc("doc.checkPoints") + "**\n\n" + step.check + "\n\n";
       (step.blocks || []).forEach(function (block, blockIndex) {
         md += "#### " + stepNum + "." + (blockIndex + 1) + " " + (block.title || "") + "\n\n";
         if (block.text) md += block.text + "\n\n";
         if (block.image) md += "![" + (block.imageName || "screenshot") + "](" + block.image + ")\n\n";
-        if ((block.annotations || []).length) md += "> 注釈 " + block.annotations.length + "件\n\n";
+        if ((block.annotations || []).length) md += "> " + tDoc("doc.annotationCount", { n: block.annotations.length }) + "\n\n";
         if ((block.jumps || []).length) {
-          md += "> ↗ ジャンプ設定: " + block.jumps.map(function (j) { return j.label || j.targetStepId; }).join(", ") + "\n\n";
+          md += "> " + tDoc("doc.jumpSettings") + " " + block.jumps.map(function (j) { return j.label || j.targetStepId; }).join(", ") + "\n\n";
         }
       });
     }
 
     normalSteps.forEach(function (step, i) {
-      renderStepMd(step, "STEP " + (i + 1), i + 1);
+      renderStepMd(step, tDoc("doc.badgeStep", { n: i + 1 }), i + 1);
     });
     if (irregularSteps.length) {
-      md += "## 非定常業務手順\n\n";
+      md += "## " + tDoc("doc.section.irregularSteps") + "\n\n";
       irregularSteps.forEach(function (step, i) {
-        renderStepMd(step, "非定常 " + (i + 1), "N" + (i + 1));
+        renderStepMd(step, tDoc("doc.badgeIrregular", { n: i + 1 }), "N" + (i + 1));
       });
     }
     if (errorSteps.length) {
-      md += "## エラー対応手順\n\n";
+      md += "## " + tDoc("doc.section.errorSteps") + "\n\n";
       errorSteps.forEach(function (step, i) {
-        renderStepMd(step, "エラー対応 " + (i + 1), "E" + (i + 1));
+        renderStepMd(step, tDoc("doc.badgeError", { n: i + 1 }), "E" + (i + 1));
       });
     }
 
@@ -83,12 +85,12 @@
 
   function exportJson() {
     const project = state.store.project;
-    const baseName = utils.sanitizeFileName(project.cover.title, "手順書");
+    const baseName = utils.sanitizeFileName(project.cover.title, tDoc("doc.fileFallbackName"));
     const fileName = baseName + "_" + utils.timestamp() + ".json";
     utils.downloadText(fileName, JSON.stringify(project, null, 2), "application/json;charset=utf-8");
     state.markClean();
     ns.render.updateDirtyIndicator();
-    utils.toast("JSONを保存しました。");
+    utils.toast(t("toast.jsonSaved"));
   }
 
   async function importJsonFile(file) {
@@ -98,9 +100,9 @@
       const data = JSON.parse(text);
       state.setProject(data);
       ns.render.renderAll();
-      utils.toast("JSONを読み込みました。");
+      utils.toast(t("toast.jsonLoaded"));
     } catch (error) {
-      alert("JSONを読み込めませんでした: " + error.message);
+      alert(t("alert.jsonLoadFailed") + error.message);
     }
   }
 
@@ -110,7 +112,7 @@
       const text = await utils.readFileAsText(file);
       const match = text.match(/<!--\s*PROCEDURE_EDITOR_DATA:([\s\S]*?)-->/);
       if (!match) {
-        alert("このHTMLファイルにはProcedure Editorのデータが含まれていません。\n閲覧HTML出力で作成したファイルを選択してください。");
+        alert(t("alert.noEditorData"));
         return;
       }
       const data = JSON.parse(match[1].trim());
@@ -124,31 +126,31 @@
       });
       state.setProject(data);
       ns.render.renderAll();
-      utils.toast("閲覧HTMLを読み込みました。");
+      utils.toast(t("toast.viewerHtmlLoaded"));
     } catch (error) {
-      alert("閲覧HTMLを読み込めませんでした: " + error.message);
+      alert(t("alert.viewerHtmlLoadFailed") + error.message);
     }
   }
 
   function downloadMarkdown() {
     const project = state.store.project;
-    const baseName = utils.sanitizeFileName(project.cover.title, "手順書");
+    const baseName = utils.sanitizeFileName(project.cover.title, tDoc("doc.fileFallbackName"));
     utils.downloadText(baseName + "_" + utils.timestamp() + ".md", generateMarkdown(), "text/markdown;charset=utf-8");
-    utils.toast("Markdownを保存しました。");
+    utils.toast(t("toast.markdownSaved"));
   }
 
   async function copyMarkdown() {
     const markdown = generateMarkdown();
     try {
       await navigator.clipboard.writeText(markdown);
-      utils.toast("Markdownをコピーしました。");
+      utils.toast(t("toast.markdownCopied"));
     } catch (error) {
       const output = utils.$("markdownOutput");
       output.value = markdown;
       output.focus();
       output.select();
       document.execCommand("copy");
-      utils.toast("Markdownをコピーしました。");
+      utils.toast(t("toast.markdownCopied"));
     }
   }
 
@@ -161,7 +163,7 @@
       const text = await utils.readFileAsText(file);
       const match = text.match(/<!--\s*PROCEDURE_EDITOR_DATA:([\s\S]*?)-->/);
       if (!match) {
-        alert("このHTMLファイルにはProcedure Editorのデータが含まれていません。\n閲覧HTML出力で作成したファイルを選択してください。");
+        alert(t("alert.noEditorData"));
         return;
       }
       const data = JSON.parse(match[1].trim());
@@ -176,12 +178,12 @@
       pendingImportData = data;
       pendingImportSteps = data.steps || [];
       if (!pendingImportSteps.length) {
-        utils.toast("インポートするSTEPが見つかりませんでした。");
+        utils.toast(t("toast.noStepsToImport"));
         return;
       }
       showStepImportModal(pendingImportSteps);
     } catch (error) {
-      alert("閲覧HTMLを読み込めませんでした: " + error.message);
+      alert(t("alert.viewerHtmlLoadFailed") + error.message);
     }
   }
 
@@ -191,7 +193,7 @@
     const selectAll = document.getElementById("stepImportSelectAll");
     if (!modal || !list || !selectAll) return;
 
-    const typeLabel = { normal: "通常", irregular: "非定常", error: "エラー" };
+    const typeLabel = { normal: t("import.type.normal"), irregular: t("import.type.irregular"), error: t("import.type.error") };
     const typeClass = { normal: "", irregular: "badge-irregular", error: "badge-error" };
 
     list.innerHTML = steps.map(function (step, i) {
@@ -238,7 +240,7 @@
       return cb.dataset.stepId;
     });
     if (!checkedIds.length) {
-      utils.toast("STEPが選択されていません。");
+      utils.toast(t("toast.noStepsSelected"));
       return;
     }
 
@@ -284,16 +286,16 @@
     state.markDirty();
     ns.render.renderAll();
     cancelStepImport();
-    utils.toast(remapped.length + " 件のSTEPを追加しました。");
+    utils.toast(t("toast.stepsImported", { n: remapped.length }));
   }
 
   function replaceAllImport() {
     if (!pendingImportData) return;
-    if (state.store.dirty && !confirm("未保存の変更があります。このHTMLで上書きしますか？")) return;
+    if (state.store.dirty && !confirm(t("confirm.overwriteWithHtml"))) return;
     state.setProject(pendingImportData);
     ns.render.renderAll();
     cancelStepImport();
-    utils.toast("閲覧HTMLを読み込みました。");
+    utils.toast(t("toast.viewerHtmlLoaded"));
   }
 
   function cancelStepImport() {

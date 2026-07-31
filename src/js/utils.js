@@ -128,7 +128,7 @@
     return new Promise(function (resolve, reject) {
       const reader = new FileReader();
       reader.onload = function () { resolve(reader.result); };
-      reader.onerror = function () { reject(reader.error || new Error("ファイルを読めませんでした。")); };
+      reader.onerror = function () { reject(reader.error || new Error(ns.i18n ? ns.i18n.t("error.cannotReadFile") : "ファイルを読めませんでした。")); };
       reader.readAsText(file);
     });
   }
@@ -136,12 +136,12 @@
   function readFileAsDataUrl(file) {
     return new Promise(function (resolve, reject) {
       if (!file || !String(file.type || "").startsWith("image/")) {
-        reject(new Error("画像ファイルを選択してください。"));
+        reject(new Error(ns.i18n ? ns.i18n.t("error.selectImageFile") : "画像ファイルを選択してください。"));
         return;
       }
       const reader = new FileReader();
       reader.onload = function () { resolve({ dataUrl: reader.result, name: file.name || "screenshot.png" }); };
-      reader.onerror = function () { reject(reader.error || new Error("画像を読めませんでした。")); };
+      reader.onerror = function () { reject(reader.error || new Error(ns.i18n ? ns.i18n.t("error.cannotReadImage") : "画像を読めませんでした。")); };
       reader.readAsDataURL(file);
     });
   }
