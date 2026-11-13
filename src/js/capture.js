@@ -103,8 +103,11 @@
       if (!session) return;
       if (!ok) { utils.toast(t("capture.noFrame")); return; }
       const canvas = document.createElement("canvas");
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
+      // 長辺 1920 を超える時だけ縮める(それ以下は等倍・PNG のまま)
+      const MAX_SIDE = 1920;
+      const scale = Math.min(1, MAX_SIDE / Math.max(video.videoWidth, video.videoHeight));
+      canvas.width = Math.round(video.videoWidth * scale);
+      canvas.height = Math.round(video.videoHeight * scale);
       canvas.getContext("2d").drawImage(video, 0, 0, canvas.width, canvas.height);
       const dataUrl = canvas.toDataURL("image/png");
 
