@@ -28,8 +28,35 @@
     ];
   }
 
+  // Parse a viewer/part HTML text into project data with images restored.
+  // Returns null when the text has no PROCEDURE_EDITOR_DATA comment; throws on broken JSON.
+  function parseEditorHtml(text) {
+    const match = String(text || "").match(/<!--\s*PROCEDURE_EDITOR_DATA:([\s\S]*?)-->/);
+    if (!match) return null;
+    const data = JSON.parse(match[1].trim());
+    const doc = new DOMParser().parseFromString(text, "text/html");
+    function restore(blockId, block) {
+      if (block.image !== "__IMG__") return;
+      const imgEl = doc.querySelector('.annotated-image[data-block-id="' + blockId + '"] img');
+      block.image = imgEl ? imgEl.getAttribute("src") : null;
+    }
+    (data.steps || []).forEach(function (step) {
+      (step.blocks || []).forEach(function (block) {
+        restore(block.id, block);
+      });
+      if (step.ref && step.ref.snapshot) {
+        (step.ref.snapshot.steps || []).forEach(function (inner) {
+          (inner.blocks || []).forEach(function (block) {
+            restore(step.id + "__" + block.id, block);
+          });
+        });
+      }
+    });
+    return data;
+  }
+
   function generateMarkdown() {
-    const project = state.store.project;
+    const project = state.expandedProject(state.store.project);
     const cover = project.cover;
     let md = "# " + (cover.title || tDoc("doc.defaultCoverTitle")) + "\n\n";
 
@@ -93,6 +120,10 @@
     utils.toast(t("toast.jsonSaved"));
   }
 
+  function afterLoad() {
+    if (ns.app && typeof ns.app.syncRefsNow === "function") ns.app.syncRefsNow();
+  }
+
   async function importJsonFile(file) {
     if (!file) return;
     try {
@@ -101,6 +132,7 @@
       state.setProject(data);
       ns.render.renderAll();
       utils.toast(t("toast.jsonLoaded"));
+      afterLoad();
     } catch (error) {
       alert(t("alert.jsonLoadFailed") + error.message);
     }
@@ -110,23 +142,15 @@
     if (!file) return;
     try {
       const text = await utils.readFileAsText(file);
-      const match = text.match(/<!--\s*PROCEDURE_EDITOR_DATA:([\s\S]*?)-->/);
-      if (!match) {
+      const data = parseEditorHtml(text);
+      if (!data) {
         alert(t("alert.noEditorData"));
         return;
       }
-      const data = JSON.parse(match[1].trim());
-      const doc = new DOMParser().parseFromString(text, "text/html");
-      (data.steps || []).forEach(function (step) {
-        (step.blocks || []).forEach(function (block) {
-          if (block.image !== "__IMG__") return;
-          const imgEl = doc.querySelector('.annotated-image[data-block-id="' + block.id + '"] img');
-          block.image = imgEl ? imgEl.getAttribute("src") : null;
-        });
-      });
       state.setProject(data);
       ns.render.renderAll();
       utils.toast(t("toast.viewerHtmlLoaded"));
+      afterLoad();
     } catch (error) {
       alert(t("alert.viewerHtmlLoadFailed") + error.message);
     }
@@ -161,20 +185,11 @@
     if (!file) return;
     try {
       const text = await utils.readFileAsText(file);
-      const match = text.match(/<!--\s*PROCEDURE_EDITOR_DATA:([\s\S]*?)-->/);
-      if (!match) {
+      const data = parseEditorHtml(text);
+      if (!data) {
         alert(t("alert.noEditorData"));
         return;
       }
-      const data = JSON.parse(match[1].trim());
-      const doc = new DOMParser().parseFromString(text, "text/html");
-      (data.steps || []).forEach(function (step) {
-        (step.blocks || []).forEach(function (block) {
-          if (block.image !== "__IMG__") return;
-          const imgEl = doc.querySelector('.annotated-image[data-block-id="' + block.id + '"] img');
-          block.image = imgEl ? imgEl.getAttribute("src") : null;
-        });
-      });
       pendingImportData = data;
       pendingImportSteps = data.steps || [];
       if (!pendingImportSteps.length) {
@@ -247,7 +262,7 @@
     const selected = pendingImportSteps.filter(function (s) { return checkedIds.includes(s.id); });
 
     const stepIdMap = {};
-    selected.forEach(function (s) { stepIdMap[s.id] = utils.uid("step"); });
+    selected.forEach(function (s) { stepIdMap[s.id] = utils.uid(s.ref ? "ref" : "step"); });
 
     const remapped = selected.map(function (step) {
       return Object.assign({}, step, {
@@ -296,6 +311,7 @@
     ns.render.renderAll();
     cancelStepImport();
     utils.toast(t("toast.viewerHtmlLoaded"));
+    afterLoad();
   }
 
   function cancelStepImport() {
@@ -317,6 +333,7 @@
     coverRows,
     coverSections,
     generateMarkdown,
+    parseEditorHtml,
     exportJson,
     importJsonFile,
     importHtmlFile,

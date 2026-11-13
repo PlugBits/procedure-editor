@@ -16,6 +16,8 @@
       <div class="header-actions no-print">
         <button type="button" class="secondary" data-action="toggle-ui-lang" id="uiLangToggle">English</button>
         <span id="dirtyState" class="save-state" aria-live="polite" data-i18n="ui.saved">保存済み</span>
+        <button type="button" class="secondary hidden" id="folderToggle" data-action="toggle-folder-panel" data-i18n="folder.toggle">フォルダ</button>
+        <button type="button" class="hidden" id="folderSave" data-action="save-folder" data-i18n="folder.save">保存</button>
         <button type="button" class="secondary" data-action="new-project" data-i18n="ui.new">新規</button>
         <label class="button secondary file-button">
           <span data-i18n="ui.loadHtml">HTML読込</span>
@@ -28,7 +30,10 @@
     </div>
   </header>
 
+  <section id="folderPanel" class="folder-panel no-print hidden"></section>
   <main class="app-main">
+    <div id="partBanner" class="part-banner no-print hidden" data-i18n="parts.editingBanner">部品を編集中: 保存すると使っている手順書を出し直します</div>
+    <div id="notice" class="notice no-print hidden" role="status"></div>
     <nav class="tabs no-print" data-i18n-aria-label="aria.editTabs" aria-label="編集タブ">
       <button type="button" class="tab active" data-tab="cover" data-i18n="tabs.cover">表紙</button>
       <button type="button" class="tab" data-tab="steps" data-i18n="tabs.steps">手順編集</button>
@@ -108,7 +113,10 @@
         <aside class="pane step-pane no-print">
           <div class="pane-head">
             <h2 data-i18n="steps.listTitle">STEP一覧</h2>
-            <button type="button" data-action="add-step" data-i18n="steps.addStep">STEP追加</button>
+            <span class="toolbar-actions">
+              <button type="button" class="secondary hidden" id="insertPartBtn" data-action="insert-part" data-i18n="parts.insert">部品を入れる</button>
+              <button type="button" data-action="add-step" data-i18n="steps.addStep">STEP追加</button>
+            </span>
           </div>
           <div id="stepList" class="step-list" aria-live="polite"></div>
         </aside>
@@ -117,6 +125,7 @@
           <div id="noStep" class="empty-state" data-i18n="steps.emptyHint">
             左の「STEP追加」から手順を作成してください。
           </div>
+          <div id="refView" class="ref-view hidden"></div>
           <div id="stepEditor" class="hidden">
             <div class="editor-head">
               <label class="field">
@@ -200,12 +209,30 @@
     </div>
   </div>
 
+  <div id="partPickerModal" class="step-import-modal" hidden>
+    <div class="step-import-backdrop" data-action="cancel-part-picker"></div>
+    <div class="step-import-panel">
+      <div class="step-import-head">
+        <h2 data-i18n="parts.pickTitle">部品を選ぶ</h2>
+        <p data-i18n="parts.pickHint">手順書に入れる部品を選んでください。</p>
+      </div>
+      <div class="step-import-body">
+        <ul id="partPickerList" class="step-import-list"></ul>
+      </div>
+      <div class="step-import-foot">
+        <button type="button" class="secondary" data-action="cancel-part-picker" data-i18n="parts.cancel">キャンセル</button>
+      </div>
+    </div>
+  </div>
+
   <script src="src/js/utils.js" defer></script>
   <script src="src/js/i18n.js" defer></script>
   <script src="src/js/state.js" defer></script>
   <script src="src/js/annotations.js" defer></script>
   <script src="src/js/export.js" defer></script>
   <script src="src/js/viewerExport.js" defer></script>
+  <script src="src/js/folder.js" defer></script>
+  <script src="src/js/parts.js" defer></script>
   <script src="src/js/render.js" defer></script>
   <script src="src/js/blocks.js" defer></script>
   <script src="src/js/app.js" defer></script>

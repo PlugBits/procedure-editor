@@ -56,7 +56,7 @@
 
   function updateCurrentStepField(field, value) {
     const step = state.getCurrentStep();
-    if (!step || !state.STEP_FIELDS.includes(field)) return;
+    if (!step || step.ref || !state.STEP_FIELDS.includes(field)) return;
     step[field] = value;
     state.markDirty();
     ns.render.renderStepList();
@@ -68,7 +68,7 @@
 
   function addBlock() {
     const step = state.getCurrentStep();
-    if (!step) return;
+    if (!step || step.ref) return;
     const block = state.createBlock((step.blocks || []).length + 1);
     step.blocks = step.blocks || [];
     step.blocks.push(block);
@@ -227,7 +227,7 @@
   function moveBlockToStep(blockId, targetStepId) {
     const found = state.findBlockById(blockId);
     const target = state.findStepById(targetStepId);
-    if (!found || !target || found.step.id === target.step.id) return;
+    if (!found || !target || target.step.ref || found.step.id === target.step.id) return;
     const block = found.step.blocks.splice(found.blockIndex, 1)[0];
     target.step.blocks = target.step.blocks || [];
     target.step.blocks.push(block);
@@ -272,7 +272,7 @@
 
   function ensureEditableBlock() {
     let step = state.getCurrentStep();
-    if (!step) {
+    if (!step || step.ref) {
       step = state.createStep(state.store.project.steps.length + 1);
       state.store.project.steps.push(step);
       state.store.currentStepId = step.id;
@@ -299,7 +299,7 @@
     const found = state.findStepById(state.store.currentStepId);
     if (!found) return;
     const step = found.step;
-    if (step.type === newType) return;
+    if (step.ref || step.type === newType) return;
 
     step.type = newType;
     const steps = state.store.project.steps;

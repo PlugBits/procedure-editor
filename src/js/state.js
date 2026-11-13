@@ -119,11 +119,53 @@
     const normalized = createProject(docLang);
     normalized.version = 2;
     normalized.docLang = docLang;
+    if (source.kind === "part") {
+      normalized.kind = "part";
+      normalized.partId = source.partId ? String(source.partId) : utils.uid("part");
+    }
     normalized.cover = normalizeCover(source.cover || {}, docLang);
     normalized.steps = Array.isArray(source.steps)
       ? source.steps.map(function (step, index) { return normalizeStep(step, index, docLang); })
       : [];
+    if (hasRefSteps(normalized)) normalized.version = 3;
     return normalized;
+  }
+
+  function hasRefSteps(project) {
+    return !!(project && Array.isArray(project.steps) && project.steps.some(function (step) { return step && step.ref; }));
+  }
+
+  // Project used for all output (preview / markdown / viewer HTML body).
+  // Docs without refs are returned as-is so their output is unchanged.
+  function expandedProject(project) {
+    if (!hasRefSteps(project)) return project;
+    if (ns.parts && typeof ns.parts.expandProject === "function") return ns.parts.expandProject(project);
+    return project;
+  }
+
+  function normalizeRefStep(step, index, docLang) {
+    const ref = step.ref && typeof step.ref === "object" ? step.ref : {};
+    const snapshot = ref.snapshot && Array.isArray(ref.snapshot.steps) ? ref.snapshot.steps : [];
+    const partTitle = ref.partTitle != null ? String(ref.partTitle) : "";
+    return {
+      id: step.id || utils.uid("ref"),
+      ref: {
+        partId: ref.partId != null ? String(ref.partId) : "",
+        partTitle: partTitle,
+        file: ref.file != null ? String(ref.file) : "",
+        snapshot: {
+          steps: snapshot
+            .filter(function (inner) { return inner && typeof inner === "object" && !inner.ref; })
+            .map(function (inner, innerIndex) { return normalizeStep(inner, innerIndex, docLang); })
+        }
+      },
+      type: "normal",
+      title: partTitle,
+      screen: "",
+      summary: "",
+      check: "",
+      blocks: []
+    };
   }
 
   function normalizeCover(cover, docLang) {
@@ -135,6 +177,7 @@
   }
 
   function normalizeStep(step, index, docLang) {
+    if (step && step.ref) return normalizeRefStep(step, index, docLang);
     const normalized = {
       id: step.id || utils.uid("step"),
       type: STEP_TYPES.includes(step.type) ? step.type : "normal",
@@ -220,6 +263,7 @@
 
   function setProject(project) {
     store.project = normalizeProject(project);
+    if (ns.folder && typeof ns.folder.setCurrentPath === "function") ns.folder.setCurrentPath(null);
     const firstStep = store.project.steps[0] || null;
     store.currentStepId = firstStep ? firstStep.id : null;
     store.currentBlockId = firstStep && firstStep.blocks[0] ? firstStep.blocks[0].id : null;
@@ -304,6 +348,8 @@
     createJump,
     createAnnotation,
     normalizeProject,
+    hasRefSteps,
+    expandedProject,
     setProject,
     getCurrentStep,
     getCurrentBlock,

@@ -16,7 +16,24 @@
     utils.toast(t("toast.htmlSaved"));
   }
 
-  function buildViewerHtml(project) {
+  // Copy of the project without runtime-only flags (ref.missing); docs without refs are returned as-is.
+  function persistableProject(project) {
+    if (!state.hasRefSteps(project)) return project;
+    const copy = JSON.parse(JSON.stringify(project));
+    copy.steps.forEach(function (step) {
+      if (step.ref) delete step.ref.missing;
+    });
+    return copy;
+  }
+
+  function buildViewerHtml(sourceProject) {
+    if (state.hasRefSteps(sourceProject)) {
+      sourceProject.version = 3;
+    } else if (sourceProject.version === 3) {
+      sourceProject.version = 2;
+    }
+    const savedProject = persistableProject(sourceProject);
+    const project = state.expandedProject(sourceProject);
     const cover = project.cover;
     const docLang = project.docLang === "en" ? "en" : "ja";
     const allSteps = project.steps;
@@ -73,6 +90,7 @@
       return [
         '<section id="step-' + utils.escapeAttribute(step.id) + '" class="viewer-step' + typeClass + '">',
         '<h3>' + label + " " + utils.escapeHtml(step.title || "") + "</h3>",
+        step.fromPart ? '<p class="viewer-part-label" style="margin:0 0 8px;color:' + (step.fromPart.missing ? '#b91c1c' : '#667085') + ';font-size:12px">' + utils.escapeHtml(tDoc("doc.fromPart", { title: step.fromPart.partTitle || "" })) + (step.fromPart.missing ? ' (' + utils.escapeHtml(tDoc("doc.partMissing")) + ')' : '') + '</p>' : "",
         step.screen ? '<p><strong>' + utils.escapeHtml(tDoc("doc.screenNameLabel")) + '</strong> ' + utils.escapeHtml(step.screen) + "</p>" : "",
         step.summary ? '<p>' + utils.textToHtml(step.summary) + "</p>" : "",
         step.check ? '<aside class="viewer-callout viewer-callout-warning"><h4>' + utils.escapeHtml(tDoc("doc.checkPoints")) + '</h4><p>' + utils.textToHtml(step.check) + "</p></aside>" : "",
@@ -108,8 +126,8 @@
 
     const css = viewerCss();
     const js = viewerScript(tDoc("doc.backLabel")).replace(/<\/script/gi, "<\\/script");
-    const embeddedJson = JSON.stringify(project).replace(/<\/script/gi, "<\\/script");
-    const dataComment = buildDataComment(project);
+    const embeddedJson = JSON.stringify(savedProject).replace(/<\/script/gi, "<\\/script");
+    const dataComment = buildDataComment(savedProject);
 
     return [
       "<!DOCTYPE html>",
@@ -150,6 +168,13 @@
       (step.blocks || []).forEach(function (block) {
         if (block.image) block.image = "__IMG__";
       });
+      if (step.ref && step.ref.snapshot) {
+        (step.ref.snapshot.steps || []).forEach(function (inner) {
+          (inner.blocks || []).forEach(function (block) {
+            if (block.image) block.image = "__IMG__";
+          });
+        });
+      }
     });
     const safe = JSON.stringify(stripped).replace(/-->/g, "--\\u003e");
     return "<!-- PROCEDURE_EDITOR_DATA:" + safe + " -->";

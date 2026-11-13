@@ -15,6 +15,32 @@
     renderMarkdown();
     updateDirtyIndicator();
     syncTabVisibility();
+    renderPartBanner();
+    if (ns.app && typeof ns.app.renderFolderUi === "function") ns.app.renderFolderUi();
+  }
+
+  function renderPartBanner() {
+    const banner = utils.$("partBanner");
+    if (banner) banner.classList.toggle("hidden", state.store.project.kind !== "part");
+  }
+
+  function folderConnected() {
+    return !!(ns.folder && typeof ns.folder.isSupported === "function" && ns.folder.isSupported() &&
+      ns.folder.getState().status === "connected");
+  }
+
+  // Per-type step numbers (id -> n) that account for steps coming from parts.
+  // Returns null for docs without refs (callers then use the plain index).
+  function stepNumbering(project) {
+    if (!state.hasRefSteps(project)) return null;
+    const expanded = state.expandedProject(project);
+    const counters = { normal: 0, irregular: 0, error: 0 };
+    const map = {};
+    expanded.steps.forEach(function (s) {
+      counters[s.type] = (counters[s.type] || 0) + 1;
+      if (!s.fromPart) map[s.id] = counters[s.type];
+    });
+    return map;
   }
 
   function renderCover() {
@@ -39,7 +65,38 @@
     const irregularSteps = steps.filter(function (s) { return s.type === "irregular"; });
     const errorSteps     = steps.filter(function (s) { return s.type === "error"; });
 
+    const numbering = stepNumbering(state.store.project);
+    function numOf(step, index) {
+      return numbering && numbering[step.id] ? numbering[step.id] : index + 1;
+    }
+
+    function refItemHtml(step) {
+      const active = step.id === state.store.currentStepId ? " active" : "";
+      const ref = step.ref;
+      const count = ref.snapshot && ref.snapshot.steps ? ref.snapshot.steps.length : 0;
+      let meta = '<span class="step-meta">' + utils.escapeHtml(t("parts.stepCount", { n: count })) + "</span>";
+      if (ref.missing) {
+        meta = '<span class="step-meta part-missing">' + utils.escapeHtml(t("parts.missing")) + "</span>";
+      } else if (!folderConnected()) {
+        meta = '<span class="step-meta">' + utils.escapeHtml(t("parts.offline")) + "</span>";
+      }
+      return [
+        '<div class="step-item step-item-part' + (ref.missing ? " step-item-missing" : "") + active + '" draggable="true" data-sort-step-id="' + utils.escapeAttribute(step.id) + '">',
+        '<span class="step-drag-handle no-print" aria-hidden="true">↕</span>',
+        '<button type="button" class="step-item-body" data-action="select-step" data-step-id="' + utils.escapeAttribute(step.id) + '">',
+        '<span class="step-line">',
+        '<span class="badge badge-part">🧩 ' + utils.escapeHtml(t("parts.badge")) + '</span>',
+        '<span class="step-title">' + utils.escapeHtml(ref.partTitle || step.title || t("ui.untitled")) + '</span>',
+        '</span>',
+        meta,
+        '</button>',
+        '<button type="button" class="step-item-delete no-print" data-action="remove-ref" data-step-id="' + utils.escapeAttribute(step.id) + '" title="' + utils.escapeAttribute(t("parts.removeRef")) + '">×</button>',
+        '</div>'
+      ].join("");
+    }
+
     function stepItemHtml(step, badgeText, badgeClass, extraClass) {
+      if (step.ref) return refItemHtml(step);
       const active = step.id === state.store.currentStepId ? " active" : "";
       return [
         '<div class="step-item' + extraClass + active + '" draggable="true" data-sort-step-id="' + utils.escapeAttribute(step.id) + '">',
@@ -57,7 +114,7 @@
     }
 
     let html = normalSteps.map(function (step, i) {
-      return stepItemHtml(step, t("ui.badgeStep", { n: i + 1 }), "badge", "");
+      return stepItemHtml(step, t("ui.badgeStep", { n: numOf(step, i) }), "badge", "");
     }).join("");
 
     if (!normalSteps.length) {
@@ -67,26 +124,75 @@
     if (irregularSteps.length) {
       html += '<div class="step-list-divider step-list-divider-irregular"><span>' + utils.escapeHtml(t("ui.dividerIrregular")) + '</span></div>';
       html += irregularSteps.map(function (step, i) {
-        return stepItemHtml(step, t("ui.badgeIrregular", { n: i + 1 }), "badge badge-irregular", " step-item-irregular");
+        return stepItemHtml(step, t("ui.badgeIrregular", { n: numOf(step, i) }), "badge badge-irregular", " step-item-irregular");
       }).join("");
     }
 
     if (errorSteps.length) {
       html += '<div class="step-list-divider"><span>' + utils.escapeHtml(t("ui.dividerError")) + '</span></div>';
       html += errorSteps.map(function (step, i) {
-        return stepItemHtml(step, t("ui.badgeError", { n: i + 1 }), "badge badge-error", " step-item-error");
+        return stepItemHtml(step, t("ui.badgeError", { n: numOf(step, i) }), "badge badge-error", " step-item-error");
       }).join("");
     }
 
     box.innerHTML = html;
   }
 
+  function renderRefView(step) {
+    const box = utils.$("refView");
+    if (!box) return;
+    const ref = step.ref;
+    const snapshot = ref.snapshot && ref.snapshot.steps ? ref.snapshot.steps : [];
+    const connected = folderConnected();
+    const canOpen = connected && !ref.missing && !!ref.file;
+    let status = "";
+    if (ref.missing) status = '<p class="part-missing-note">' + utils.escapeHtml(t("parts.missing")) + "</p>";
+    else if (!connected) status = '<p class="hint">' + utils.escapeHtml(t("parts.offline")) + "</p>";
+
+    const nums = { normal: 0, irregular: 0, error: 0 };
+    const labels = {};
+    snapshot.forEach(function (s) {
+      nums[s.type] = (nums[s.type] || 0) + 1;
+      const n = nums[s.type];
+      if (s.type === "error") labels[s.id] = { label: tDoc("doc.badgeError", { n: n }), num: "E" + n, type: "error" };
+      else if (s.type === "irregular") labels[s.id] = { label: tDoc("doc.badgeIrregular", { n: n }), num: "N" + n, type: "irregular" };
+      else labels[s.id] = { label: tDoc("doc.badgeStep", { n: n }), num: n, type: "normal" };
+    });
+    const body = snapshot.map(function (s) {
+      const info = labels[s.id];
+      return previewStepHtml(s, info.label, info.num, info.type, labels);
+    }).join("");
+
+    box.innerHTML = [
+      '<div class="ref-head">',
+      '<h2><span class="badge badge-part">🧩 ' + utils.escapeHtml(t("parts.badge")) + '</span> ' + utils.escapeHtml(ref.partTitle || step.title || "") + '</h2>',
+      '<div class="toolbar-actions no-print">',
+      canOpen ? '<button type="button" data-action="open-part" data-step-id="' + utils.escapeAttribute(step.id) + '">' + utils.escapeHtml(t("parts.open")) + '</button>' : "",
+      '<button type="button" class="danger" data-action="remove-ref" data-step-id="' + utils.escapeAttribute(step.id) + '">' + utils.escapeHtml(t("parts.removeRef")) + '</button>',
+      '</div>',
+      '</div>',
+      status,
+      '<p class="hint no-print">' + utils.escapeHtml(t("parts.readonlyHint")) + '</p>',
+      '<div class="ref-body preview">' + body + '</div>'
+    ].join("");
+  }
+
   function renderEditor() {
     const step = state.getCurrentStep();
     const noStep = utils.$("noStep");
     const editor = utils.$("stepEditor");
+    const refView = utils.$("refView");
+    const isRef = !!(step && step.ref);
+    if (refView) {
+      refView.classList.toggle("hidden", !isRef);
+      if (isRef) renderRefView(step); else refView.innerHTML = "";
+    }
     noStep.classList.toggle("hidden", !!step);
-    editor.classList.toggle("hidden", !step);
+    editor.classList.toggle("hidden", !step || isRef);
+    if (isRef) {
+      renderSortList();
+      return;
+    }
     if (!step) {
       utils.$("blockList").innerHTML = "";
       renderSortList();
@@ -125,6 +231,7 @@
   function blockCard(step, block, index) {
     const active = block.id === state.store.currentBlockId ? " active" : "";
     const stepOptions = state.store.project.steps.map(function (targetStep, targetIndex) {
+      if (targetStep.ref) return "";
       return '<option value="' + utils.escapeAttribute(targetStep.id) + '"' + (targetStep.id === step.id ? " selected" : "") + '>STEP ' + (targetIndex + 1) + " " + utils.escapeHtml(targetStep.title || "") + "</option>";
     }).join("");
 
@@ -165,9 +272,10 @@
 
     const stepNums = {};
     let ec = 0, ic = 0;
+    const numbering = stepNumbering(state.store.project);
     state.store.project.steps.forEach(function (s) {
-      if (s.type === "error") { ec += 1; stepNums[s.id] = { label: t("ui.badgeError", { n: ec }), type: "error" }; }
-      else if (s.type === "irregular") { ic += 1; stepNums[s.id] = { label: t("ui.badgeIrregular", { n: ic }), type: "irregular" }; }
+      if (s.type === "error") { ec += 1; stepNums[s.id] = { label: t("ui.badgeError", { n: numbering && numbering[s.id] ? numbering[s.id] : ec }), type: "error" }; }
+      else if (s.type === "irregular") { ic += 1; stepNums[s.id] = { label: t("ui.badgeIrregular", { n: numbering && numbering[s.id] ? numbering[s.id] : ic }), type: "irregular" }; }
     });
 
     const available = nonNormalSteps.filter(function (s) { return !internalJumpedIds.includes(s.id); });
@@ -270,8 +378,9 @@
   }
 
   function renderPreview() {
-    const cover = state.store.project.cover;
-    const allSteps = state.store.project.steps;
+    const outProject = state.expandedProject(state.store.project);
+    const cover = outProject.cover;
+    const allSteps = outProject.steps;
     const normalSteps    = allSteps.filter(function (s) { return s.type === "normal"; });
     const irregularSteps = allSteps.filter(function (s) { return s.type === "irregular"; });
     const errorSteps     = allSteps.filter(function (s) { return s.type === "error"; });
@@ -317,6 +426,10 @@
     const typeClass = stepType === "error" ? " preview-step-error" : stepType === "irregular" ? " preview-step-irregular" : "";
     let html = '<section class="preview-step' + typeClass + '" id="step-' + utils.escapeAttribute(step.id) + '">';
     html += '<h3>' + utils.escapeHtml(label) + ' ' + utils.escapeHtml(step.title || "") + '</h3>';
+    if (step.fromPart) {
+      html += '<p class="part-label' + (step.fromPart.missing ? ' part-label-missing' : '') + '">' + utils.escapeHtml(tDoc("doc.fromPart", { title: step.fromPart.partTitle || "" })) +
+        (step.fromPart.missing ? ' (' + utils.escapeHtml(tDoc("doc.partMissing")) + ')' : '') + '</p>';
+    }
     if (step.screen) html += '<p><strong>' + utils.escapeHtml(tDoc("doc.screenNameLabel")) + '</strong> ' + utils.escapeHtml(step.screen) + '</p>';
     if (step.summary) html += '<p>' + utils.textToHtml(step.summary) + '</p>';
     if (step.check) html += '<aside class="preview-callout preview-callout-warning"><h4>' + utils.escapeHtml(tDoc("doc.checkPoints")) + '</h4><p>' + utils.textToHtml(step.check) + '</p></aside>';
@@ -381,6 +494,7 @@
     renderEditor,
     renderBlocks,
     renderSortList,
+    renderPartBanner,
     renderPreview,
     renderMarkdown,
     showTab,
